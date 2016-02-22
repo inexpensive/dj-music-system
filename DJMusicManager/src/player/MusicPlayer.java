@@ -96,6 +96,7 @@ public class MusicPlayer {
 		return out;
 	}
 	
+	//update the details of the Music Player
 	public void updateTrackDetails(Track track){
 		songTitle = track.getTitle();
 		artistName = js.readArtist(track.getArtists().get(0)).getName();
