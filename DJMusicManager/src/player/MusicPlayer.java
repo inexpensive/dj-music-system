@@ -59,6 +59,7 @@ public class MusicPlayer {
         });
 	}
 	
+	//load and play the given spotify track uri
 	public void play(String uri){
 		Track track = js.readTrack(Link.create(uri));
 		MediaHelper.waitFor(track, 10);
@@ -68,6 +69,7 @@ public class MusicPlayer {
 		updateTrackDetails(track);
 	}
 	
+	//load and play the given track
 	public void play(Track track){
 		MediaHelper.waitFor(track, 10);
 		if (track.isLoaded()){
@@ -75,6 +77,7 @@ public class MusicPlayer {
 		}
 	}
 	
+	//toggle pausing and unpausing of the song
 	public void pause(){
 		if (!paused){
 			js.pause();
@@ -86,6 +89,7 @@ public class MusicPlayer {
 		}
 	}
 	
+	//search for the target string. returns the first result as a Track
 	public Track search(String target){
 		Search search = new Search(Query.token(target));
 		SearchResult result = SearchEngine.getInstance().search(search);
@@ -103,14 +107,17 @@ public class MusicPlayer {
 		albumName = js.readAlbum(track.getAlbum()).getName();
 	}
 	
+	//return the currently loaded song's title
 	public String getSongTitle(){
 		return songTitle;
 	}
 	
+	//return the currently loaded song's artist
 	public String getArtist(){
 		return artistName;
 	}
 	
+	//return the currently loaded song's album
 	public String getAlbum(){
 		return albumName;
 	}

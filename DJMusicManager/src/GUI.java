@@ -117,6 +117,7 @@ public class GUI extends JFrame{
 		this.setVisible(true);
 	}
 	
+	//update the currently playing label with info pulled from the MusicPlayer
 	private void updateCurrentlyPlaying(){
 		currentlyPlaying.setText(player.getSongTitle() + " by " + player.getArtist() + " on " + player.getAlbum());
 		pack();
