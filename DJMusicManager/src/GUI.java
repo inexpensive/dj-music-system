@@ -3,6 +3,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,13 +37,14 @@ public class GUI extends JFrame{
 		player = new MusicPlayer();
 		panel = new JPanel();
 		login = new JButton("Login");
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		
 		//logs in using the supplied username/password
 		//gets rid of the login info and adds in the controls
 		//TODO: only do the swap over to controls if the login is actually successful
 		login.addActionListener(new ActionListener(){
 			@Override
-			public void actionPerformed(ActionEvent arg0){
+			public void actionPerformed(ActionEvent e){
 				player.login(username.getText(), new String(password.getPassword()));
 				panel.remove(username);
 				panel.remove(password);
@@ -67,14 +69,28 @@ public class GUI extends JFrame{
 		});
 		
 		//password field
-		//TODO: trigger the login on pressing ENTER/RETURN in the password box
 		password = new JPasswordField(20);
+		password.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e){
+				player.login(username.getText(), new String(password.getPassword()));
+				panel.remove(username);
+				panel.remove(password);
+				panel.remove(login);
+				panel.add(play);
+				panel.add(pause);
+				panel.add(search);
+				panel.add(searchTarget);
+				panel.add(currentlyPlaying);
+				pack();
+			}
+		});
 		
 		//plays let's dance by david bowie
 		play = new JButton("Play");
 		play.addActionListener(new ActionListener(){
 			@Override
-			public void actionPerformed(ActionEvent arg0){
+			public void actionPerformed(ActionEvent e){
 				player.play("spotify:track:0F0MA0ns8oXwGw66B2BSXm");
 				updateCurrentlyPlaying();
 			}
@@ -84,7 +100,7 @@ public class GUI extends JFrame{
 		pause = new JButton("Pause");
 		pause.addActionListener(new ActionListener(){
 			@Override
-			public void actionPerformed(ActionEvent arg0){
+			public void actionPerformed(ActionEvent e){
 				player.pause();
 			}
 		});
@@ -93,14 +109,21 @@ public class GUI extends JFrame{
 		search = new JButton("Search");
 		search.addActionListener(new ActionListener(){
 			@Override
-			public void actionPerformed(ActionEvent arg0){
+			public void actionPerformed(ActionEvent e){
 				player.play(player.search(searchTarget.getText()));
 				updateCurrentlyPlaying();
 			}
 		});
 		
 		//the search box
-		searchTarget = new JTextField(50);
+		searchTarget = new JTextField(35);
+		searchTarget.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e){
+				player.play(player.search(searchTarget.getText()));
+				updateCurrentlyPlaying();
+			}
+		});
 		
 		//currently playing song label
 		currentlyPlaying = new JLabel("No Song Loaded"); 
