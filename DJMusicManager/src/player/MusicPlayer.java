@@ -15,17 +15,25 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MusicPlayer {
+public class MusicPlayer implements Runnable {
 	
 	private JahSpotify js;
 	private boolean paused = false;
+	private boolean started = false;
 	private String songTitle;
 	private String artistName;
 	private String albumName;
 	private ArrayList<Track> searchResults;
+	private int duration = 1;
+	
+	private Playlist playlist;
 	
 	public MusicPlayer(){
-		//empty constructor
+		playlist = new Playlist();
+	}
+	
+	public MusicPlayer(Playlist pl){
+		playlist = pl;
 	}
 	
 	//this has to be called first before anything else
@@ -69,7 +77,7 @@ public class MusicPlayer {
 		if (track.isLoaded()){
 			js.play(track.getId());			
 		}
-		updateTrackDetails(track);
+		this.updateTrackDetails(track);
 	}
 	
 	//load and play the given track
@@ -86,8 +94,26 @@ public class MusicPlayer {
 		MediaHelper.waitFor(track, 10);
 		if (track.isLoaded()){
 			js.play(track.getId());
-			updateTrackDetails(track);
+			this.updateTrackDetails(track);
 		}
+	}
+	
+	//play the current song in the playlist
+	public void play(){
+		Track track = playlist.getCurrentTrack();
+		MediaHelper.waitFor(track, 10);
+		duration = track.getLength();
+		if (track.isLoaded()){
+			js.play(track.getId());
+			this.updateTrackDetails(track);
+		}
+		if (!started) started = true;
+	}
+	
+	//skip the current song and play the next one
+	public void skip(){
+		playlist.skipTrack();
+		this.play();
 	}
 	
 	//toggle pausing and unpausing of the song
@@ -109,18 +135,17 @@ public class MusicPlayer {
 		MediaHelper.waitFor(result, 10);
 		Link tmp = result.getTracksFound().get(0);
 		Track out = js.readTrack(tmp);
-		updateTrackDetails(out);
 		return out;
 	}
 	
 	//search for the target string and output results as a String array
 	//maxes at 10 elements
-	public String[] search(String target, boolean aks){
+	public synchronized String[] search(String target, boolean aks){
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
 		SearchResult result = SearchEngine.getInstance().search(search);
-		MediaHelper.waitFor(result, 10);
+		//MediaHelper.waitFor(result, 10);
 		//need these for later
 		ArrayList<String> temp = new ArrayList<String>();
 		List<Link> tempLinkResults = result.getTracksFound();
@@ -165,5 +190,27 @@ public class MusicPlayer {
 	//return the currently loaded song's album
 	public String getAlbum(){
 		return albumName;
+	}
+	
+	//adds the given track by index to the playlist
+	public void addSong(int index){
+		playlist.addToPlaylist(searchResults.get(index));
+	}
+
+	
+	//takes care of skipping to the next song when a song ends
+	@Override
+	public synchronized void run() {
+		try {
+			while(true){
+				this.wait(duration);
+				skip();
+				notifyAll();
+			}
+		} 
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 	}
 }

@@ -16,20 +16,22 @@ import javax.swing.JTextField;
 import player.MusicPlayer;
 
 
-public class GUI extends JFrame{
+public class GUI extends JFrame implements Runnable{
 	
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private JButton login, play, pause, search;
+	private JButton login, play, pause, search, addToPlaylist, skip;
 	private JLabel currentlyPlaying;
 	
+	protected boolean loggedIn = false;
 	protected JTextField username, searchTarget;
 	protected JPasswordField password;
 	protected MusicPlayer player;
 	protected JPanel panel;
 	protected JComboBox<String> searchResults;
+	protected Thread durationCounter;
 
 	
 	public GUI(){
@@ -37,10 +39,13 @@ public class GUI extends JFrame{
 		super("DJ Music Manager");
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
+		
 		player = new MusicPlayer();
 		panel = new JPanel();
 		login = new JButton("Login");
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		
+		durationCounter = new Thread(player);
 		
 		//logs in using the supplied username/password
 		//gets rid of the login info and adds in the controls
@@ -58,7 +63,10 @@ public class GUI extends JFrame{
 				panel.add(searchTarget);
 				panel.add(currentlyPlaying);
 				panel.add(searchResults);
+				panel.add(addToPlaylist);
+				panel.add(skip);
 				pack();
+				loggedIn = true;
 			}
 		});
 		
@@ -87,7 +95,10 @@ public class GUI extends JFrame{
 				panel.add(searchTarget);
 				panel.add(currentlyPlaying);
 				panel.add(searchResults);
+				panel.add(addToPlaylist);
+				panel.add(skip);
 				pack();
+				loggedIn = true;
 			}
 		});
 		
@@ -96,8 +107,11 @@ public class GUI extends JFrame{
 		play.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.play(searchResults.getSelectedIndex());
-				updateCurrentlyPlaying();
+				//player.play(searchResults.getSelectedIndex());
+				player.play();
+				//updateCurrentlyPlaying();
+				//durationCounter.start();
+				
 			}
 		});
 		
@@ -140,6 +154,25 @@ public class GUI extends JFrame{
 		defaultSearchResult[0] = "Search first by";
 		searchResults = new JComboBox<String>(defaultSearchResult);
 		
+		//addtoplaylist button
+		addToPlaylist = new JButton("Add to Playlist");
+		addToPlaylist.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e){
+				player.addSong(searchResults.getSelectedIndex());
+			}
+		});
+		
+		//skip button
+		skip = new JButton("Skip");
+		skip.addActionListener(new ActionListener(){
+			@Override
+			public void actionPerformed(ActionEvent e){
+				player.skip();
+				updateCurrentlyPlaying();
+			}
+		});
+		
 		panel.add(username);
 		panel.add(password);
 		panel.add(login);
@@ -166,5 +199,20 @@ public class GUI extends JFrame{
 			model.addElement(item);
 		}
 		pack();
+	}
+
+	@Override
+	public synchronized void run() {
+		try {
+			wait();
+			while(true){
+				updateCurrentlyPlaying();
+				wait();
+			}
+		} 
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
 	}
 }
