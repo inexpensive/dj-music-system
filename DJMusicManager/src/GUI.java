@@ -4,7 +4,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -27,6 +29,7 @@ public class GUI extends JFrame{
 	protected JPasswordField password;
 	protected MusicPlayer player;
 	protected JPanel panel;
+	protected JComboBox<String> searchResults;
 
 	
 	public GUI(){
@@ -54,6 +57,7 @@ public class GUI extends JFrame{
 				panel.add(search);
 				panel.add(searchTarget);
 				panel.add(currentlyPlaying);
+				panel.add(searchResults);
 				pack();
 			}
 		});
@@ -82,16 +86,17 @@ public class GUI extends JFrame{
 				panel.add(search);
 				panel.add(searchTarget);
 				panel.add(currentlyPlaying);
+				panel.add(searchResults);
 				pack();
 			}
 		});
 		
-		//plays let's dance by david bowie
+		//plays selected song from the search results combo box
 		play = new JButton("Play");
 		play.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.play("spotify:track:0F0MA0ns8oXwGw66B2BSXm");
+				player.play(searchResults.getSelectedIndex());
 				updateCurrentlyPlaying();
 			}
 		});
@@ -110,8 +115,9 @@ public class GUI extends JFrame{
 		search.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.play(player.search(searchTarget.getText()));
-				updateCurrentlyPlaying();
+				//player.play(player.search(searchTarget.getText()));
+				//updateCurrentlyPlaying();
+				updateSearchComboBox(player.search(searchTarget.getText(), true));
 			}
 		});
 		
@@ -120,13 +126,19 @@ public class GUI extends JFrame{
 		searchTarget.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.play(player.search(searchTarget.getText()));
-				updateCurrentlyPlaying();
+				//player.play(player.search(searchTarget.getText()));
+				//updateCurrentlyPlaying();
+				updateSearchComboBox(player.search(searchTarget.getText(), true));
 			}
 		});
 		
 		//currently playing song label
 		currentlyPlaying = new JLabel("No Song Loaded"); 
+		
+		//setup default search result
+		String[] defaultSearchResult = new String[1];
+		defaultSearchResult[0] = "Search first by";
+		searchResults = new JComboBox<String>(defaultSearchResult);
 		
 		panel.add(username);
 		panel.add(password);
@@ -143,6 +155,16 @@ public class GUI extends JFrame{
 	//update the currently playing label with info pulled from the MusicPlayer
 	private void updateCurrentlyPlaying(){
 		currentlyPlaying.setText(player.getSongTitle() + " by " + player.getArtist() + " on " + player.getAlbum());
+		pack();
+	}
+	
+	//fill the combo box with results from the search
+	private void updateSearchComboBox(String[] results){
+		DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) searchResults.getModel();
+		model.removeAllElements();
+		for (String item : results){
+			model.addElement(item);
+		}
 		pack();
 	}
 }

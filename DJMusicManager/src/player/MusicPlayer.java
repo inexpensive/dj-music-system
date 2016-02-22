@@ -12,6 +12,8 @@ import jahspotify.services.MediaHelper;
 import jahspotify.services.SearchEngine;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MusicPlayer {
 	
@@ -20,6 +22,7 @@ public class MusicPlayer {
 	private String songTitle;
 	private String artistName;
 	private String albumName;
+	private ArrayList<Track> searchResults;
 	
 	public MusicPlayer(){
 		//empty constructor
@@ -77,6 +80,16 @@ public class MusicPlayer {
 		}
 	}
 	
+	//load and play the selected track by index
+	public void play(int index){
+		Track track = searchResults.get(index);
+		MediaHelper.waitFor(track, 10);
+		if (track.isLoaded()){
+			js.play(track.getId());
+			updateTrackDetails(track);
+		}
+	}
+	
 	//toggle pausing and unpausing of the song
 	public void pause(){
 		if (!paused){
@@ -100,8 +113,40 @@ public class MusicPlayer {
 		return out;
 	}
 	
+	//search for the target string and output results as a String array
+	//maxes at 10 elements
+	public String[] search(String target, boolean aks){
+		
+		//search for the target
+		Search search = new Search(Query.token(target));
+		SearchResult result = SearchEngine.getInstance().search(search);
+		MediaHelper.waitFor(result, 10);
+		//need these for later
+		ArrayList<String> temp = new ArrayList<String>();
+		List<Link> tempLinkResults = result.getTracksFound();
+		ArrayList<Track> tempTrackResults = new ArrayList<Track>();
+		//move the search results into other arrays
+		int i = 0;
+		while (i < 10 && i < tempLinkResults.size()){
+			tempTrackResults.add(js.readTrack(tempLinkResults.get(i)));
+			temp.add(trackToString(tempTrackResults.get(i)));
+			i++;
+		}
+		//update search results and set up the string array
+		searchResults = tempTrackResults;
+		String[] out = new String[temp.size()];
+		for (int i1 = 0; i1 < temp.size(); i1++){
+			out[i1] = temp.get(i1);
+		}
+		return out;
+	}
+	
+	private String trackToString(Track track) {
+		return track.getTitle() + " by " + js.readArtist(track.getArtists().get(0)).getName() + " on " + js.readAlbum(track.getAlbum()).getName();
+	}
+
 	//update the details of the Music Player
-	public void updateTrackDetails(Track track){
+	private void updateTrackDetails(Track track){
 		songTitle = track.getTitle();
 		artistName = js.readArtist(track.getArtists().get(0)).getName();
 		albumName = js.readAlbum(track.getAlbum()).getName();
