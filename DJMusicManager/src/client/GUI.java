@@ -6,7 +6,7 @@
  * by Lawrence Bouzane (inexpensive on github)				*
  ************************************************************/
 
-package ui;
+package client;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
