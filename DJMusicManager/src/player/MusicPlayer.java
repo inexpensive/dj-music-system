@@ -22,6 +22,7 @@ import jahspotify.services.MediaHelper;
 import jahspotify.services.SearchEngine;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -42,7 +43,6 @@ public class MusicPlayer {
 	private int duration;
 	private Playlist playlist;
 	private Song currentSong;
-	@SuppressWarnings("unused")
 	private DJServer server;
 	
 	protected Executor pool = Executors.newCachedThreadPool();
@@ -117,7 +117,13 @@ public class MusicPlayer {
 			}
 		};
 		pool.execute(r);
-		//gui.updateCurrentlyPlaying();
+		//send the currently song to the server
+		try {
+			this.updateCurrentlyPlaying();
+		} 
+		catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	//skip the current song and play the next one
@@ -168,7 +174,7 @@ public class MusicPlayer {
 	}
 	
 	//outputs desired format for the currentlyPlaying info in the client
-	private String trackToString(Track track) {
+	public String trackToString(Track track) {
 		return track.getTitle() + " by " + js.readArtist(track.getArtists().get(0)).getName() + " on " + js.readAlbum(track.getAlbum()).getName();
 	}
 
@@ -219,6 +225,12 @@ public class MusicPlayer {
 			skip();
 		}
 		System.out.println("auto skip thread ended");
+	}
+
+	private void updateCurrentlyPlaying() throws IOException {
+		
+		String currentlyPlaying = this.trackToString(currentSong.getTrack());
+		server.updateCurrentlyPlaying(currentlyPlaying);
 	}
 	
 }

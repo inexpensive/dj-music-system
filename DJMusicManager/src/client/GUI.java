@@ -41,8 +41,8 @@ public class GUI extends JFrame{
 	private static final long serialVersionUID = 1L;
 	private JButton login, play, pause, search, addToPlaylist, skip;
 	private JLabel currentlyPlaying;
-	private Socket serverSocket;
-	private ObjectInputStream inFromServer;
+	private Socket serverSocket, currentlyPlayingSocket;
+	private ObjectInputStream inFromServer, inFromCurrentlyPlaying;
 	private ObjectOutputStream outToServer;
 	
 	protected JTextField username, searchTarget;
@@ -59,8 +59,10 @@ public class GUI extends JFrame{
 		
 		//server details
 		serverSocket = new Socket("127.0.0.1", 1729);
+		currentlyPlayingSocket = new Socket("127.0.0.1", 1730);
 		inFromServer = new ObjectInputStream(serverSocket.getInputStream());
 		outToServer = new ObjectOutputStream(serverSocket.getOutputStream());
+		inFromCurrentlyPlaying = new ObjectInputStream(currentlyPlayingSocket.getInputStream());
 		
 		//setting up panel
 		panel = new JPanel();
@@ -224,6 +226,19 @@ public class GUI extends JFrame{
 		    }
 		};
 		this.addWindowListener(exitListener);
+		
+		Runnable r = new Runnable(){
+			@Override
+			public void run(){
+				try {
+					updateCurrentlyPlaying();
+				} 
+				catch (ClassNotFoundException | IOException e) {
+					e.printStackTrace();
+				}
+			}
+		};
+		pool.execute(r);
 	}
 	
 	
@@ -286,10 +301,13 @@ public class GUI extends JFrame{
 		this.setVisible(true);
 	}
 	
-	//update the currently playing label with the passed in string
-	public void updateCurrentlyPlaying(String deets){
-		currentlyPlaying.setText(deets);
-		pack();
+	//update the currently playing label with the passed in string from the server
+	public void updateCurrentlyPlaying() throws ClassNotFoundException, IOException{
+		while(true){
+			String deets = (String) inFromCurrentlyPlaying.readObject();
+			currentlyPlaying.setText(deets);
+			pack();
+		}	
 	}
 	
 	//sends a search request to the server along with a target string

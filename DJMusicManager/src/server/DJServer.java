@@ -20,10 +20,10 @@ import player.MusicPlayer;
 
 public class DJServer {
 	
-	private ServerSocket server;
-	private Socket clientSocket;
+	private ServerSocket server, currentlyPlayingServer;
+	private Socket clientSocket, clientCurrentlyPlayingSocket;
 	private MusicPlayer player;
-	private ObjectOutputStream outToClient;
+	private ObjectOutputStream outToClient, outToCurrentlyPlaying;
 	private ObjectInputStream inFromClient;
 	private boolean done = false;
 	private String command;
@@ -38,10 +38,13 @@ public class DJServer {
 		
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
+		currentlyPlayingServer = new ServerSocket(1730);
 		clientSocket = server.accept();
+		clientCurrentlyPlayingSocket = currentlyPlayingServer.accept();
 		player = new MusicPlayer(this);
 		outToClient = new ObjectOutputStream(clientSocket.getOutputStream());
 		inFromClient = new ObjectInputStream(clientSocket.getInputStream());
+		outToCurrentlyPlaying = new ObjectOutputStream(clientCurrentlyPlayingSocket.getOutputStream());
 		Runnable r = new Runnable(){
 			@Override
 			public void run(){
@@ -93,6 +96,8 @@ public class DJServer {
 	public void close() throws IOException{
 		server.close();
 		clientSocket.close();
+		currentlyPlayingServer.close();
+		clientCurrentlyPlayingSocket.close();
 		System.exit(0);
 	}
 	
@@ -154,6 +159,10 @@ public class DJServer {
 			}
 		}
 		
+	}
+	
+	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
+		outToCurrentlyPlaying.writeObject(currentlyPlaying);
 	}
 	
 	//start the server!
