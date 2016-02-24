@@ -2,8 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
-	<classpathentry kind="lib" path="/home/lawrence/libjahspotify/api/target/jahspotify-api-0.0.1-SNAPSHOT.jar"/>
-	<classpathentry kind="lib" path="/home/lawrence/libjahspotify/native-jar/target/jahspotify-native-jar-0.0.1-SNAPSHOT.jar"/>
-	<classpathentry kind="lib" path="/home/lawrence/Downloads/commons-logging-1.2/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="libs/commons-logging-1.2.jar"/>
+	<classpathentry kind="lib" path="libs/jahspotify-api-0.0.1-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="libs/jahspotify-native-jar-0.0.1-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

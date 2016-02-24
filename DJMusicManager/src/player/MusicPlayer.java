@@ -1,3 +1,13 @@
+/************************************************************
+ * MusicPlayer for DJ Music Manager (tentative title)  		*
+ * connects to and plays songs from spotify					*
+ * 												            *
+ * uses the libjahspotify library 							*
+ * by Niels van de Weem	 (nvdweem on github)				*
+ * 															*
+ * by Lawrence Bouzane (inexpensive on github)				*
+ ************************************************************/
+
 package player;
 
 import jahspotify.AbstractConnectionListener;
@@ -19,7 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import server.DJServer;
-import ui.GUI;
 
 
 public class MusicPlayer {
@@ -33,16 +42,10 @@ public class MusicPlayer {
 	private int duration;
 	private Playlist playlist;
 	private Song currentSong;
-	private GUI gui;
 	@SuppressWarnings("unused")
 	private DJServer server;
 	
-	protected Executor pool = Executors.newFixedThreadPool(5);
-	
-	public MusicPlayer(GUI g){
-		playlist = new Playlist();
-		gui = g;
-	}
+	protected Executor pool = Executors.newCachedThreadPool();
 	
 	public MusicPlayer(DJServer s){
 		playlist = new Playlist();
@@ -85,34 +88,6 @@ public class MusicPlayer {
                 }
             }
         });
-	}
-	
-	//load and play the given spotify track uri
-	public void play(String uri){
-		Track track = js.readTrack(Link.create(uri));
-		MediaHelper.waitFor(track, 10);
-		if (track.isLoaded()){
-			js.play(track.getId());			
-		}
-		this.updateTrackDetails(track);
-	}
-	
-	//load and play the given track
-	public void play(Track track){
-		MediaHelper.waitFor(track, 10);
-		if (track.isLoaded()){
-			js.play(track.getId());
-		}
-	}
-	
-	//load and play the selected track by index 
-	public void play(int index){
-		Track track = searchResults.get(index);
-		MediaHelper.waitFor(track, 10);
-		if (track.isLoaded()){
-			js.play(track.getId());
-			this.updateTrackDetails(track);
-		}
 	}
 	
 	//play the current song in the playlist
@@ -170,11 +145,7 @@ public class MusicPlayer {
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
-		//System.out.println(search == null);
-		//System.out.println("^-search   v-searchengine");
 		SearchResult result = SearchEngine.getInstance().search(search);
-		//System.out.println(result == null);
-		//}
 		MediaHelper.waitFor(result, 5);
 		//need these for later
 		ArrayList<String> temp = new ArrayList<String>();
@@ -196,6 +167,7 @@ public class MusicPlayer {
 		return out;
 	}
 	
+	//outputs desired format for the currentlyPlaying info in the client
 	private String trackToString(Track track) {
 		return track.getTitle() + " by " + js.readArtist(track.getArtists().get(0)).getName() + " on " + js.readAlbum(track.getAlbum()).getName();
 	}
@@ -227,11 +199,13 @@ public class MusicPlayer {
 		playlist.addToPlaylist(searchResults.get(index));
 	}
 
-
+	//return the playlist
 	public Playlist getPlaylist() {
 		return playlist;
 	}
 	
+	//automatically skips the track once it's over
+	//TODO: figure out how to freeze the sleep counter while the system is paused in order to not trigger the autoskip early
 	private void autoSkip(){
 		Song tempSong = currentSong;
 		try {
