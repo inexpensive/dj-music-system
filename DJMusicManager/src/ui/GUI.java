@@ -1,7 +1,11 @@
+package ui;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultComboBoxModel;
@@ -12,11 +16,12 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
+import javax.swing.SwingConstants;
 
 import player.MusicPlayer;
 
 
-public class GUI extends JFrame implements Runnable{
+public class GUI extends JFrame{
 	
 	/**
 	 * 
@@ -31,7 +36,7 @@ public class GUI extends JFrame implements Runnable{
 	protected MusicPlayer player;
 	protected JPanel panel;
 	protected JComboBox<String> searchResults;
-	protected Thread durationCounter;
+	protected Executor pool = Executors.newFixedThreadPool(5);
 
 	
 	public GUI(){
@@ -40,12 +45,11 @@ public class GUI extends JFrame implements Runnable{
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		
-		player = new MusicPlayer();
+		player = new MusicPlayer(this);
 		panel = new JPanel();
 		login = new JButton("Login");
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		
-		durationCounter = new Thread(player);
 		
 		//logs in using the supplied username/password
 		//gets rid of the login info and adds in the controls
@@ -66,7 +70,6 @@ public class GUI extends JFrame implements Runnable{
 				panel.add(addToPlaylist);
 				panel.add(skip);
 				pack();
-				loggedIn = true;
 			}
 		});
 		
@@ -98,7 +101,6 @@ public class GUI extends JFrame implements Runnable{
 				panel.add(addToPlaylist);
 				panel.add(skip);
 				pack();
-				loggedIn = true;
 			}
 		});
 		
@@ -109,8 +111,6 @@ public class GUI extends JFrame implements Runnable{
 			public void actionPerformed(ActionEvent e){
 				//player.play(searchResults.getSelectedIndex());
 				player.play();
-				//updateCurrentlyPlaying();
-				//durationCounter.start();
 				
 			}
 		});
@@ -129,25 +129,20 @@ public class GUI extends JFrame implements Runnable{
 		search.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				//player.play(player.search(searchTarget.getText()));
-				//updateCurrentlyPlaying();
 				updateSearchComboBox(player.search(searchTarget.getText(), true));
 			}
 		});
-		
 		//the search box
 		searchTarget = new JTextField(35);
 		searchTarget.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				//player.play(player.search(searchTarget.getText()));
-				//updateCurrentlyPlaying();
 				updateSearchComboBox(player.search(searchTarget.getText(), true));
 			}
 		});
-		
+
 		//currently playing song label
-		currentlyPlaying = new JLabel("No Song Loaded"); 
+		currentlyPlaying = new JLabel("No Song Loaded", SwingConstants.LEFT); 
 		
 		//setup default search result
 		String[] defaultSearchResult = new String[1];
@@ -169,7 +164,6 @@ public class GUI extends JFrame implements Runnable{
 			@Override
 			public void actionPerformed(ActionEvent e){
 				player.skip();
-				updateCurrentlyPlaying();
 			}
 		});
 		
@@ -186,7 +180,7 @@ public class GUI extends JFrame implements Runnable{
 	}
 	
 	//update the currently playing label with info pulled from the MusicPlayer
-	private void updateCurrentlyPlaying(){
+	public void updateCurrentlyPlaying(){
 		currentlyPlaying.setText(player.getSongTitle() + " by " + player.getArtist() + " on " + player.getAlbum());
 		pack();
 	}
@@ -199,20 +193,5 @@ public class GUI extends JFrame implements Runnable{
 			model.addElement(item);
 		}
 		pack();
-	}
-
-	@Override
-	public synchronized void run() {
-		try {
-			wait();
-			while(true){
-				updateCurrentlyPlaying();
-				wait();
-			}
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
 	}
 }

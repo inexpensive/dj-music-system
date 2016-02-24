@@ -1,3 +1,4 @@
+import ui.GUI;
 
 public class Main {
 
@@ -9,8 +10,6 @@ public class Main {
 		GUI g;
 		g = new GUI();
 		g.display();
-		Thread updater = new Thread(g);
-		//updater.start();
 	}
 
 }

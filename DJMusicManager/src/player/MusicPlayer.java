@@ -14,22 +14,31 @@ import jahspotify.services.SearchEngine;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
-public class MusicPlayer implements Runnable {
+import ui.GUI;
+
+
+public class MusicPlayer {
 	
 	private JahSpotify js;
 	private boolean paused = false;
-	private boolean started = false;
 	private String songTitle;
 	private String artistName;
 	private String albumName;
 	private ArrayList<Track> searchResults;
-	private int duration = 1;
-	
+	private int duration;
 	private Playlist playlist;
+	private Song currentSong;
+	private GUI gui;
 	
-	public MusicPlayer(){
+	protected Executor pool = Executors.newFixedThreadPool(5);
+	
+	public MusicPlayer(GUI g){
 		playlist = new Playlist();
+		gui = g;
 	}
 	
 	public MusicPlayer(Playlist pl){
@@ -88,7 +97,7 @@ public class MusicPlayer implements Runnable {
 		}
 	}
 	
-	//load and play the selected track by index
+	//load and play the selected track by index 
 	public void play(int index){
 		Track track = searchResults.get(index);
 		MediaHelper.waitFor(track, 10);
@@ -102,16 +111,35 @@ public class MusicPlayer implements Runnable {
 	public void play(){
 		Track track = playlist.getCurrentTrack();
 		MediaHelper.waitFor(track, 10);
-		duration = track.getLength();
 		if (track.isLoaded()){
 			js.play(track.getId());
 			this.updateTrackDetails(track);
 		}
-		if (!started) started = true;
+		duration = track.getLength();
+		currentSong = new Song(track);
+		//this avoids a bug with searching (it should be undetectable to the ear)
+		//for whatever reason pausing and unpausing the player prevents the bug
+		js.pause();
+		try {
+			TimeUnit.SECONDS.sleep(1);
+		} 
+		catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		js.resume();
+		Runnable r = new Runnable(){
+			@Override
+			public void run(){
+				autoSkip();
+			}
+		};
+		pool.execute(r);
+		gui.updateCurrentlyPlaying();
 	}
 	
 	//skip the current song and play the next one
 	public void skip(){
+		currentSong.setSkipped(true);
 		playlist.skipTrack();
 		this.play();
 	}
@@ -144,8 +172,12 @@ public class MusicPlayer implements Runnable {
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
+		//System.out.println(search == null);
+		//System.out.println("^-search   v-searchengine");
 		SearchResult result = SearchEngine.getInstance().search(search);
-		//MediaHelper.waitFor(result, 10);
+		//System.out.println(result == null);
+		//}
+		MediaHelper.waitFor(result, 5);
 		//need these for later
 		ArrayList<String> temp = new ArrayList<String>();
 		List<Link> tempLinkResults = result.getTracksFound();
@@ -197,20 +229,24 @@ public class MusicPlayer implements Runnable {
 		playlist.addToPlaylist(searchResults.get(index));
 	}
 
+
+	public Playlist getPlaylist() {
+		return playlist;
+	}
 	
-	//takes care of skipping to the next song when a song ends
-	@Override
-	public synchronized void run() {
+	private void autoSkip(){
+		Song tempSong = currentSong;
 		try {
-			while(true){
-				this.wait(duration);
-				skip();
-				notifyAll();
-			}
+			TimeUnit.MILLISECONDS.sleep(duration);
 		} 
 		catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+		//check if the song has been skipped by an external source
+		if (!tempSong.isSkipped()){
+			skip();
+		}
+		System.out.println("auto skip thread ended");
 	}
+	
 }
