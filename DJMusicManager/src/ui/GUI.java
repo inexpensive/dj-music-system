@@ -4,6 +4,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -29,6 +34,9 @@ public class GUI extends JFrame{
 	private static final long serialVersionUID = 1L;
 	private JButton login, play, pause, search, addToPlaylist, skip;
 	private JLabel currentlyPlaying;
+	private Socket serverSocket;
+	private ObjectInputStream inFromServer;
+	private ObjectOutputStream outToServer;
 	
 	protected boolean loggedIn = false;
 	protected JTextField username, searchTarget;
@@ -39,10 +47,14 @@ public class GUI extends JFrame{
 	protected Executor pool = Executors.newFixedThreadPool(5);
 
 	
-	public GUI(){
+	public GUI() throws UnknownHostException, IOException{
 		//preamble to set the frame up
 		super("DJ Music Manager");
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		serverSocket = new Socket("127.0.0.1", 1729);
+		inFromServer = new ObjectInputStream(serverSocket.getInputStream());
+		outToServer = new ObjectOutputStream(serverSocket.getOutputStream());
 		
 		
 		player = new MusicPlayer(this);
@@ -57,19 +69,12 @@ public class GUI extends JFrame{
 		login.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.login(username.getText(), new String(password.getPassword()));
-				panel.remove(username);
-				panel.remove(password);
-				panel.remove(login);
-				panel.add(play);
-				panel.add(pause);
-				panel.add(search);
-				panel.add(searchTarget);
-				panel.add(currentlyPlaying);
-				panel.add(searchResults);
-				panel.add(addToPlaylist);
-				panel.add(skip);
-				pack();
+				try {
+					login();
+				} 
+				catch (IOException | ClassNotFoundException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		
@@ -88,19 +93,12 @@ public class GUI extends JFrame{
 		password.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.login(username.getText(), new String(password.getPassword()));
-				panel.remove(username);
-				panel.remove(password);
-				panel.remove(login);
-				panel.add(play);
-				panel.add(pause);
-				panel.add(search);
-				panel.add(searchTarget);
-				panel.add(currentlyPlaying);
-				panel.add(searchResults);
-				panel.add(addToPlaylist);
-				panel.add(skip);
-				pack();
+				try {
+					login();
+				} 
+				catch (IOException | ClassNotFoundException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		
@@ -109,8 +107,12 @@ public class GUI extends JFrame{
 		play.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				//player.play(searchResults.getSelectedIndex());
-				player.play();
+				try {
+					play();
+				} 
+				catch (IOException e1) {
+					e1.printStackTrace();
+				}
 				
 			}
 		});
@@ -129,7 +131,12 @@ public class GUI extends JFrame{
 		search.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				updateSearchComboBox(player.search(searchTarget.getText(), true));
+				try {
+					search(searchTarget.getText());
+				} 
+				catch (ClassNotFoundException | IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		//the search box
@@ -137,7 +144,12 @@ public class GUI extends JFrame{
 		searchTarget.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				updateSearchComboBox(player.search(searchTarget.getText(), true));
+				try {
+					search(searchTarget.getText());
+				} 
+				catch (IOException | ClassNotFoundException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 
@@ -154,7 +166,12 @@ public class GUI extends JFrame{
 		addToPlaylist.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.addSong(searchResults.getSelectedIndex());
+				try {
+					addSong(searchResults.getSelectedIndex());
+				} 
+				catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		
@@ -163,7 +180,12 @@ public class GUI extends JFrame{
 		skip.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
-				player.skip();
+				try {
+					skip();
+				} 
+				catch (IOException e1) {
+					e1.printStackTrace();
+				}
 			}
 		});
 		
@@ -173,6 +195,50 @@ public class GUI extends JFrame{
 		this.add(panel);
 	}
 	
+	
+
+	protected void addSong(int index) throws IOException {
+		outToServer.writeObject("add");
+		outToServer.writeObject(Integer.valueOf(index));
+		
+	}
+
+	protected void play() throws IOException {
+		outToServer.writeObject("play");
+		
+	}
+	
+	protected void skip() throws IOException {
+		outToServer.writeObject("skip");
+	}
+	
+	protected void pause() throws IOException {
+		outToServer.writeObject("pause");
+	}
+
+	protected void login() throws IOException, ClassNotFoundException {
+		outToServer.writeObject("login");
+		outToServer.writeObject(username.getText());
+		outToServer.writeObject(new String(password.getPassword()));
+		String result = (String) inFromServer.readObject();
+		System.out.println(result);
+		if (result.equals("yes")) {
+			panel.remove(username);
+			panel.remove(password);
+			panel.remove(login);
+			panel.add(play);
+			panel.add(pause);
+			panel.add(search);
+			panel.add(searchTarget);
+			panel.add(currentlyPlaying);
+			panel.add(searchResults);
+			panel.add(addToPlaylist);
+			panel.add(skip);
+			pack();
+		}
+		
+	}
+
 	//displays the GUI
 	public void display(){
 		this.pack();
@@ -185,6 +251,13 @@ public class GUI extends JFrame{
 		pack();
 	}
 	
+	protected void search(String text) throws IOException, ClassNotFoundException {
+		outToServer.writeObject("search");
+		outToServer.writeObject(searchTarget.getText());
+		String[] results = (String[]) inFromServer.readObject();
+		this.updateSearchComboBox(results);
+	}
+	
 	//fill the combo box with results from the search
 	private void updateSearchComboBox(String[] results){
 		DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) searchResults.getModel();
@@ -193,5 +266,12 @@ public class GUI extends JFrame{
 			model.addElement(item);
 		}
 		pack();
+	}
+	
+	public static void main(String[] args) throws UnknownHostException, IOException {
+		// make a frame
+		GUI g;
+		g = new GUI();
+		g.display();
 	}
 }

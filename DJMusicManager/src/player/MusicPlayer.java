@@ -18,6 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import server.DJServer;
 import ui.GUI;
 
 
@@ -33,12 +34,19 @@ public class MusicPlayer {
 	private Playlist playlist;
 	private Song currentSong;
 	private GUI gui;
+	@SuppressWarnings("unused")
+	private DJServer server;
 	
 	protected Executor pool = Executors.newFixedThreadPool(5);
 	
 	public MusicPlayer(GUI g){
 		playlist = new Playlist();
 		gui = g;
+	}
+	
+	public MusicPlayer(DJServer s){
+		playlist = new Playlist();
+		server = s;
 	}
 	
 	public MusicPlayer(Playlist pl){
@@ -134,7 +142,7 @@ public class MusicPlayer {
 			}
 		};
 		pool.execute(r);
-		gui.updateCurrentlyPlaying();
+		//gui.updateCurrentlyPlaying();
 	}
 	
 	//skip the current song and play the next one
@@ -156,19 +164,9 @@ public class MusicPlayer {
 		}
 	}
 	
-	//search for the target string. returns the first result as a Track
-	public Track search(String target){
-		Search search = new Search(Query.token(target));
-		SearchResult result = SearchEngine.getInstance().search(search);
-		MediaHelper.waitFor(result, 10);
-		Link tmp = result.getTracksFound().get(0);
-		Track out = js.readTrack(tmp);
-		return out;
-	}
-	
 	//search for the target string and output results as a String array
 	//maxes at 10 elements
-	public synchronized String[] search(String target, boolean aks){
+	public synchronized String[] search(String target){
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
