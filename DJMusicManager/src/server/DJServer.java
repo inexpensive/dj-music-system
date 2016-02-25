@@ -1,18 +1,22 @@
 /************************************************************
  * Server for DJ Music Manager (tentative title)  			*
- * waits for requests from a client and passes	            *
+ * waits for requests from a proxy and passes	            *
  * them to the MusicPlayer	        						*
+ *															*
+ * uses the libjahspotify library 							*
+ * by Niels van de Weem	 (nvdweem on github)				*
  * 															*
  * by Lawrence Bouzane (inexpensive on github)				*
  ************************************************************/
 
 package server;
 
+import jahspotify.media.Track;
+
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
-import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -20,45 +24,55 @@ import player.MusicPlayer;
 
 public class DJServer {
 	
-	private ServerSocket server, currentlyPlayingServer;
-	private Socket clientSocket, clientCurrentlyPlayingSocket;
+	private ServerSocket server;
 	private MusicPlayer player;
-	private ObjectOutputStream outToClient, outToCurrentlyPlaying;
-	private ObjectInputStream inFromClient;
-	private boolean done = false;
-	private String command;
 	private boolean paused = false;
 	private boolean playlistInit = false;
 	private boolean started = false;
+	private ArrayList<ServerProxy> proxies;
 	
-	
-	protected Executor pool = Executors.newFixedThreadPool(5);
+	protected Executor pool = Executors.newCachedThreadPool();
+
 	
 	public DJServer() throws IOException{
 		
+		proxies = new ArrayList<ServerProxy>();
+		
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
-		currentlyPlayingServer = new ServerSocket(1730);
-		clientSocket = server.accept();
-		clientCurrentlyPlayingSocket = currentlyPlayingServer.accept();
 		player = new MusicPlayer(this);
-		outToClient = new ObjectOutputStream(clientSocket.getOutputStream());
-		inFromClient = new ObjectInputStream(clientSocket.getInputStream());
-		outToCurrentlyPlaying = new ObjectOutputStream(clientCurrentlyPlayingSocket.getOutputStream());
+		Scanner in = new Scanner(System.in);
+		System.out.print("username: ");
+		String username = in.next();
+		System.out.print("password: ");
+		String password = in.next(); //TODO: mask this
+		player.login(username, password);
+		in.close();
+		
+		this.createNewProxy();
+		
+	}
+	
+	public void createNewProxy() {
 		Runnable r = new Runnable(){
 			@Override
 			public void run(){
 				try {
-					listener();
+					proxy();
 				} 
-				catch (ClassNotFoundException | IOException e) {
+				catch (IOException e) {
 					e.printStackTrace();
 				}
 			}
 		};
 		pool.execute(r);
+		
 	}
 	
+	protected void proxy() throws IOException{
+		proxies.add(new ServerProxy(server,this));
+	}
+
 	//sends a play request to the MusicPlayer if not started and playlist is initialized
 	//calls pause if the system is paused
 	public void play(){
@@ -92,81 +106,39 @@ public class DJServer {
 		player.login(username, password);
 	}
 	
+	//sends a search to the music player and sends back the results to the proxy
+	public ArrayList<Track> search(String target){
+		ArrayList<Track> results = player.search(target);
+		return results;
+	}
+	
 	//closes the server
 	public void close() throws IOException{
 		server.close();
-		clientSocket.close();
-		currentlyPlayingServer.close();
-		clientCurrentlyPlayingSocket.close();
 		System.exit(0);
 	}
 	
-	//listens for commands from the client
-	protected void listener() throws IOException, ClassNotFoundException {
-		System.out.println("NOW RUNNING");
-		while(!done){
-			System.out.println("waiting for input...");
-			command = (String) inFromClient.readObject();
-			System.out.println("received " + command);
-			switch (command) {
-				
-			//sends a play request to the MusicPlayer
-			case "play":
-				this.play();
-				break;
-					
-			//sends a pause request to the MusicPlayer	
-			case "pause":
-				this.pause();
-				break;
-					
-			//sends a skip request to the MusicPlayer
-			case "skip":
-				this.skip();
-				break;
-					
-			//sends the login credentials to the MusicPlayer 
-			//and sends back an all good message to the client	
-			case "login":
-				String username = (String) inFromClient.readObject();
-				String password = (String) inFromClient.readObject();
-				outToClient.writeObject("yes");
-				this.login(username, password);
-				break;
-					
-			//sends the search target string to the MusicPlayer
-			//and sends the results to the client
-			case "search":
-				String target = (String) inFromClient.readObject();
-				String[] results = player.search(target);
-				outToClient.writeObject(results);
-				break;
-					
-			//sends the taken in index to the MusicPlayer and initializes playlist boolean if not initialized
-			case "add":
-				int index = ((Integer) inFromClient.readObject()).intValue();
-				player.addSong(index);
-				if (!playlistInit) {
-					playlistInit = true;
-				}
-				break;
-					
-			//closes the server
-			case "close":
-				this.close();
-				done = true;
-				break;
-			}
-		}
-		
-	}
-	
+	//sends an update request to each proxy
 	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
-		outToCurrentlyPlaying.writeObject(currentlyPlaying);
+		for (int i = 0; i < proxies.size(); i++){
+			proxies.get(i).updateCurrentlyPlaying(currentlyPlaying);
+		}
 	}
 	
 	//start the server!
 	public static void main(String[] args) throws IOException{
 			new DJServer();
+	}
+	//sends the taken in index to the MusicPlayer and initializes playlist boolean if not initialized
+	public void add(Track track) {
+		player.addSong(track);
+		if (!playlistInit) {
+			playlistInit = true;
+		}		
+	}
+
+	public String trackToString(Track track) {
+		// TODO Auto-generated method stub
+		return player.trackToString(track);
 	}
 }

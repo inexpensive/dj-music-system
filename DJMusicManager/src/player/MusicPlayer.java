@@ -39,7 +39,6 @@ public class MusicPlayer {
 	private String songTitle;
 	private String artistName;
 	private String albumName;
-	private ArrayList<Track> searchResults;
 	private int duration;
 	private Playlist playlist;
 	private Song currentSong;
@@ -145,9 +144,9 @@ public class MusicPlayer {
 		}
 	}
 	
-	//search for the target string and output results as a String array
+	//search for the target string and output results as a Track ArrayList
 	//maxes at 10 elements
-	public synchronized String[] search(String target){
+	public ArrayList<Track> search(String target){
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
@@ -156,21 +155,17 @@ public class MusicPlayer {
 		//need these for later
 		ArrayList<String> temp = new ArrayList<String>();
 		List<Link> tempLinkResults = result.getTracksFound();
-		ArrayList<Track> tempTrackResults = new ArrayList<Track>();
+		ArrayList<Track> results = new ArrayList<Track>();
 		//move the search results into other arrays
 		int i = 0;
 		while (i < 10 && i < tempLinkResults.size()){
-			tempTrackResults.add(js.readTrack(tempLinkResults.get(i)));
-			temp.add(trackToString(tempTrackResults.get(i)));
+			results.add(js.readTrack(tempLinkResults.get(i)));
+			temp.add(trackToString(results.get(i)));
 			i++;
 		}
-		//update search results and set up the string array
-		searchResults = tempTrackResults;
-		String[] out = new String[temp.size()];
-		for (int i1 = 0; i1 < temp.size(); i1++){
-			out[i1] = temp.get(i1);
-		}
-		return out;
+		return results;
+		
+		
 	}
 	
 	//outputs desired format for the currentlyPlaying info in the client
@@ -200,9 +195,9 @@ public class MusicPlayer {
 		return albumName;
 	}
 	
-	//adds the given track by index to the playlist
-	public void addSong(int index){
-		playlist.addToPlaylist(searchResults.get(index));
+	//adds the given track to the playlist
+	public void addSong(Track track){
+		playlist.addToPlaylist(track);
 	}
 
 	//return the playlist
@@ -226,7 +221,8 @@ public class MusicPlayer {
 		}
 		System.out.println("auto skip thread ended");
 	}
-
+	
+	//send an update currently playing song request to the server
 	private void updateCurrentlyPlaying() throws IOException {
 		
 		String currentlyPlaying = this.trackToString(currentSong.getTrack());

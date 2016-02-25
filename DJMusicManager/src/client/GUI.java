@@ -1,6 +1,6 @@
 /************************************************************
  * GUI-based client for DJ Music Manager (tentative title)  *
- * connects to the server and sends requests to it          *
+ * connects to a proxy and sends requests to it        	    *
  * via the buttons in the GUI        						*
  * 															*
  * by Lawrence Bouzane (inexpensive on github)				*
@@ -10,8 +10,6 @@ package client;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
@@ -31,7 +29,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
@@ -39,14 +36,13 @@ import javax.swing.SwingConstants;
 public class GUI extends JFrame{
 	
 	private static final long serialVersionUID = 1L;
-	private JButton login, play, pause, search, addToPlaylist, skip;
+	private JButton play, pause, search, addToPlaylist, skip;
 	private JLabel currentlyPlaying;
 	private Socket serverSocket, currentlyPlayingSocket;
 	private ObjectInputStream inFromServer, inFromCurrentlyPlaying;
 	private ObjectOutputStream outToServer;
 	
-	protected JTextField username, searchTarget;
-	protected JPasswordField password;
+	protected JTextField searchTarget;
 	protected JPanel panel;
 	protected JComboBox<String> searchResults;
 	protected Executor pool = Executors.newFixedThreadPool(5);
@@ -59,7 +55,7 @@ public class GUI extends JFrame{
 		
 		//server details
 		serverSocket = new Socket("127.0.0.1", 1729);
-		currentlyPlayingSocket = new Socket("127.0.0.1", 1730);
+		currentlyPlayingSocket = new Socket("127.0.0.1", 1729);
 		inFromServer = new ObjectInputStream(serverSocket.getInputStream());
 		outToServer = new ObjectOutputStream(serverSocket.getOutputStream());
 		inFromCurrentlyPlaying = new ObjectInputStream(currentlyPlayingSocket.getInputStream());
@@ -67,45 +63,6 @@ public class GUI extends JFrame{
 		//setting up panel
 		panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-		
-		//sends a login request
-		login = new JButton("Login");
-		login.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e){
-				try {
-					login();
-				} 
-				catch (IOException | ClassNotFoundException e1) {
-					e1.printStackTrace();
-				}
-			}
-		});
-		
-		//clears the username field the first time you click in it
-		username = new JTextField("username", 20);
-		username.addMouseListener(new MouseAdapter(){
-			@Override
-			public void mouseClicked(MouseEvent e){
-					username.setText("");
-					username.removeMouseListener(this);
-			}
-		});
-		
-		//password field
-		//enter sends a login request
-		password = new JPasswordField(20);
-		password.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e){
-				try {
-					login();
-				} 
-				catch (IOException | ClassNotFoundException e1) {
-					e1.printStackTrace();
-				}
-			}
-		});
 		
 		//sends a play request
 		play = new JButton("Play");
@@ -200,11 +157,17 @@ public class GUI extends JFrame{
 		});
 		
 		
-		//add in the login controls up initialization
-		panel.add(username);
-		panel.add(password);
-		panel.add(login);
+		//add in controls
+		panel.add(play);
+		panel.add(pause);
+		panel.add(search);
+		panel.add(searchTarget);
+		panel.add(currentlyPlaying);
+		panel.add(searchResults);
+		panel.add(addToPlaylist);
+		panel.add(skip);
 		this.add(panel);
+		this.pack();
 		
 		//make the frame run closeServer on window closing
 		WindowListener exitListener = new WindowAdapter() {
@@ -212,8 +175,8 @@ public class GUI extends JFrame{
 		    @Override
 		    public void windowClosing(WindowEvent e) {
 		        int confirm = JOptionPane.showOptionDialog(
-		             null, "Are You Sure to Close Application?", 
-		             "Exit Confirmation", JOptionPane.YES_NO_OPTION, 
+		             null, "Are you sure you want to close the DJ Music Manager?", 
+		             "Please don't go!", JOptionPane.YES_NO_OPTION, 
 		             JOptionPane.QUESTION_MESSAGE, null, null, null);
 		        if (confirm == 0) {
 		           try {
@@ -264,34 +227,11 @@ public class GUI extends JFrame{
 		outToServer.writeObject("pause");
 	}
 	
-	//sends a login request to the server (including credentials from the respective boxes)
-	//waits for an all good response from the server and swaps the controls over to the MusicPlayer controls
-	protected void login() throws IOException, ClassNotFoundException {
-		outToServer.writeObject("login");
-		outToServer.writeObject(username.getText());
-		outToServer.writeObject(new String(password.getPassword()));
-		String result = (String) inFromServer.readObject();
-		System.out.println(result);
-		if (result.equals("yes")) {
-			panel.remove(username);
-			panel.remove(password);
-			panel.remove(login);
-			panel.add(play);
-			panel.add(pause);
-			panel.add(search);
-			panel.add(searchTarget);
-			panel.add(currentlyPlaying);
-			panel.add(searchResults);
-			panel.add(addToPlaylist);
-			panel.add(skip);
-			pack();
-		}
-		
-	}
-	
 	//sends a close request to the server
 	protected void closeServer() throws IOException {
 		outToServer.writeObject("close");
+		serverSocket.close();
+		currentlyPlayingSocket.close();
 		System.exit(0);
 	}
 
