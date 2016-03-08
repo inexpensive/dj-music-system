@@ -52,7 +52,7 @@ public class GUI extends JFrame{
 	public GUI() throws UnknownHostException, IOException{
 		//preamble to set the frame up
 		super("DJ Music Manager");
-		
+			
 		//server details
 		serverSocket = new Socket("127.0.0.1", 1729);
 		currentlyPlayingSocket = new Socket("127.0.0.1", 1729);
@@ -121,7 +121,12 @@ public class GUI extends JFrame{
 		});
 
 		//currently playing song label
-		currentlyPlaying = new JLabel("No Song Loaded", SwingConstants.LEFT); 
+		try {
+			currentlyPlaying = new JLabel(getCurrentlyPlaying(), SwingConstants.LEFT);
+		} 
+		catch (ClassNotFoundException e2) {
+			e2.printStackTrace();
+		} 
 		
 		//setup default search result
 		String[] defaultSearchResult = new String[1];
@@ -205,6 +210,13 @@ public class GUI extends JFrame{
 	}
 	
 	
+	private String getCurrentlyPlaying() throws IOException, ClassNotFoundException {
+		outToServer.writeObject("curr");
+		String curr = (String) inFromServer.readObject();
+		return curr;
+	}
+
+
 	//sends an add request and the index of the song to be added to the server
 	protected void addSong(int index) throws IOException {
 		outToServer.writeObject("add");

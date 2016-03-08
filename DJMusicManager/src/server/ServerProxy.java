@@ -108,6 +108,11 @@ public class ServerProxy {
 					Track track = results.get(((Integer) inFromClient.readObject()).intValue());
 					djServer.add(track);
 					break;
+					
+				case "curr":
+					String curr = djServer.getCurrentlyPlaying();
+					outToClient.writeObject(curr);
+					break;
 						
 				//closes the proxy
 				case "close":

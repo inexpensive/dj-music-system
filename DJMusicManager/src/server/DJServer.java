@@ -141,4 +141,8 @@ public class DJServer {
 		// TODO Auto-generated method stub
 		return player.trackToString(track);
 	}
+
+	public String getCurrentlyPlaying() {		
+		return player.getCurrentlyPlaying();
+	}
 }

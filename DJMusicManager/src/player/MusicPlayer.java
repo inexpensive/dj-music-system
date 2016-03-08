@@ -205,6 +205,13 @@ public class MusicPlayer {
 		return playlist;
 	}
 	
+	//return currently playing to the server (or notify there's nothing playing)
+	public String getCurrentlyPlaying(){
+		if (currentSong != null)
+			return this.trackToString(currentSong.getTrack());
+		return "No Song Loaded";
+	}
+	
 	//automatically skips the track once it's over
 	//TODO: figure out how to freeze the sleep counter while the system is paused in order to not trigger the autoskip early
 	private void autoSkip(){
