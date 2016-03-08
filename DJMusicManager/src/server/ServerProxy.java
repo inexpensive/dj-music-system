@@ -65,6 +65,10 @@ public class ServerProxy {
 		outToCurrentlyPlaying.writeObject(currentlyPlaying);
 	}
 	
+	public void close(){
+		djServer.removeProxy(this);
+	}
+	
 	//listens for commands from the client
 		protected void listener() throws IOException, ClassNotFoundException {
 			System.out.println("NOW RUNNING");
@@ -116,7 +120,7 @@ public class ServerProxy {
 						
 				//closes the proxy
 				case "close":
-					//this.close();
+					this.close();
 					done = true;
 					break;
 				}
