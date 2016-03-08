@@ -31,6 +31,7 @@ public class ServerProxy {
 	private ObjectInputStream inFromClient;
 	private Executor pool = Executors.newCachedThreadPool();
 	private ArrayList<Track> results;
+	private boolean skipRequested;
 
 	
 	ServerProxy(ServerSocket ser, DJServer djServer) throws IOException{
@@ -39,6 +40,7 @@ public class ServerProxy {
 		this.djServer = djServer;
 		controlSocket = server.accept();
 		currentlyPlayingSocket = server.accept();
+		skipRequested = false;
 		System.out.println("CONNECTION ESTABLISHED");
 		djServer.createNewProxy();
 		outToClient = new ObjectOutputStream(controlSocket.getOutputStream());
@@ -60,13 +62,17 @@ public class ServerProxy {
 	}
 	
 	//sends an update request to the client to update the currently playing song
-	//TODO: send an update when a client connects (if the system is playing music) (ideally to only that client)
 	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
 		outToCurrentlyPlaying.writeObject(currentlyPlaying);
+		skipRequested = false;
 	}
 	
 	public void close(){
 		djServer.removeProxy(this);
+	}
+	
+	public void resetSkipRequested(){
+		skipRequested = false;
 	}
 	
 	//listens for commands from the client
@@ -92,7 +98,10 @@ public class ServerProxy {
 						
 				//sends a skip request to the server
 				case "skip":
-					djServer.skip();
+					if(!skipRequested) {
+						djServer.skip();
+						skipRequested = true;
+					}
 					break;
 						
 				//sends the search target string to the server

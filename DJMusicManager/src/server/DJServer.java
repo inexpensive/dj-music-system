@@ -29,6 +29,8 @@ public class DJServer {
 	private boolean paused = false;
 	private boolean playlistInit = false;
 	private boolean started = false;
+	private int skipRequestCount;
+	private final int SKIP_THRESHOLD = 3;
 	private ArrayList<ServerProxy> proxies;
 	
 	protected Executor pool = Executors.newCachedThreadPool();
@@ -47,6 +49,7 @@ public class DJServer {
 		System.out.print("password: ");
 		String password = in.next(); //TODO: mask this
 		player.login(username, password);
+		skipRequestCount = 0;
 		in.close();
 		
 		this.createNewProxy();
@@ -96,9 +99,12 @@ public class DJServer {
 		}
 	}
 	
-	//sends a skip request to the MusicPlayer
+	//sends a skip request to the MusicPlayer once 3 skipRequests are received
 	public void skip(){
-		player.skip();
+		skipRequestCount++;
+		if (skipRequestCount >= SKIP_THRESHOLD) {
+			player.skip();
+		}
 	}
 	
 	//sends a login request the the MusicPlayer
@@ -122,7 +128,9 @@ public class DJServer {
 	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
 		for (int i = 0; i < proxies.size(); i++){
 			proxies.get(i).updateCurrentlyPlaying(currentlyPlaying);
+			proxies.get(i).resetSkipRequested();
 		}
+		skipRequestCount = 0;
 	}
 	
 	//start the server!
