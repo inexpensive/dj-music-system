@@ -23,26 +23,22 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 class ServerProxy {
-	
-	private ServerSocket server;
-	private Socket controlSocket, currentlyPlayingSocket;
-	private DJServer djServer;
+
+	private final DJServer DJ_SERVER;
 	private ObjectOutputStream outToClient, outToCurrentlyPlaying;
 	private ObjectInputStream inFromClient;
-	private Executor pool = Executors.newCachedThreadPool();
 	private ArrayList<Track> results;
 	private boolean skipRequested;
 
 	
-	ServerProxy(ServerSocket ser, DJServer djServer) throws IOException{
+	ServerProxy(ServerSocket ser, DJServer DJ_SERVER) throws IOException{
 		//setting up the socket to accept a connection from a client
-		server = ser;
-		this.djServer = djServer;
-		controlSocket = server.accept();
-		currentlyPlayingSocket = server.accept();
+		this.DJ_SERVER = DJ_SERVER;
+		Socket controlSocket = ser.accept();
+		Socket currentlyPlayingSocket = ser.accept();
 		skipRequested = false;
 		System.out.println("CONNECTION ESTABLISHED");
-		djServer.createNewProxy();
+		DJ_SERVER.createNewProxy();
 		outToClient = new ObjectOutputStream(controlSocket.getOutputStream());
 		inFromClient = new ObjectInputStream(controlSocket.getInputStream());
 		outToCurrentlyPlaying = new ObjectOutputStream(currentlyPlayingSocket.getOutputStream());
@@ -58,6 +54,7 @@ class ServerProxy {
 				}
 			}
 		};
+		Executor pool = Executors.newCachedThreadPool();
 		pool.execute(r);
 	}
 	
@@ -68,7 +65,7 @@ class ServerProxy {
 	}
 	
 	private void close(){
-		djServer.removeProxy(this);
+		DJ_SERVER.removeProxy(this);
 	}
 	
 	void resetSkipRequested(){
@@ -88,18 +85,18 @@ class ServerProxy {
 					
 				//sends a play request to the server
 				case "play":
-					djServer.play();
+					DJ_SERVER.play();
 					break;
 						
 				//sends a pause request to the server	
 				case "pause":
-					djServer.pause();
+					DJ_SERVER.pause();
 					break;
 						
 				//sends a skip request to the server
 				case "skip":
 					if(!skipRequested) {
-						djServer.skip();
+						DJ_SERVER.skip();
 						skipRequested = true;
 					}
 					break;
@@ -108,10 +105,10 @@ class ServerProxy {
 				//and sends the results to the client
 				case "search":
 					String target = (String) inFromClient.readObject();
-                    results = djServer.search(target);
+                    results = DJ_SERVER.search(target);
                     String[] out = new String[results.size()];
 					for (int i = 0; i < results.size(); i++){
-						out[i] = djServer.trackToString(results.get(i));
+						out[i] = DJ_SERVER.trackToString(results.get(i));
 					}
 					outToClient.writeObject(out);
 					break;
@@ -119,11 +116,11 @@ class ServerProxy {
 				//sends the taken in index to the server and initializes playlist boolean if not initialized
 				case "add":
 					Track track = results.get((Integer) inFromClient.readObject());
-					djServer.add(track);
+					DJ_SERVER.add(track);
 					break;
 					
 				case "curr":
-					String curr = djServer.getCurrentlyPlaying();
+					String curr = DJ_SERVER.getCurrentlyPlaying();
 					outToClient.writeObject(curr);
 					break;
 						

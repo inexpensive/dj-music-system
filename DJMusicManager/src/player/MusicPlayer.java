@@ -40,26 +40,27 @@ public class MusicPlayer {
 	private String artistName;
 	private String albumName;
 	private int duration;
-	private Playlist playlist;
+	private final Playlist PLAYLIST;
 	private Song currentSong;
 	private DJServer server;
-	
-	protected Executor pool = Executors.newCachedThreadPool();
+
+	private final Executor POOL = Executors.newCachedThreadPool();
 	
 	public MusicPlayer(DJServer s){
-		playlist = new Playlist();
+		PLAYLIST = new Playlist();
 		server = s;
 	}
 	
-	public MusicPlayer(Playlist pl){
-		playlist = pl;
+	private MusicPlayer(Playlist pl){
+		PLAYLIST = pl;
 	}
 	
 	//this has to be called first before anything else
 	public void login(final String username, final String password){
 		// Determine the tempfolder and make sure it exists.
         File temp = new File(new File(MusicPlayer.class.getResource("MusicPlayer.class").getFile()).getParentFile(), "temp");
-        temp.mkdirs();
+		//noinspection ResultOfMethodCallIgnored
+		temp.mkdirs();
 
         // Start JahSpotify and login
         JahSpotifyService.initialize(temp);
@@ -89,9 +90,9 @@ public class MusicPlayer {
         });
 	}
 	
-	//play the current song in the playlist
+	//play the current song in the PLAYLIST
 	public void play(){
-		Track track = playlist.getCurrentTrack();
+		Track track = PLAYLIST.getCurrentTrack();
 		MediaHelper.waitFor(track, 10);
 		if (track.isLoaded()){
 			js.play(track.getId());
@@ -115,7 +116,7 @@ public class MusicPlayer {
 				autoSkip();
 			}
 		};
-		pool.execute(r);
+		POOL.execute(r);
 		//send the currently song to the server
 		try {
 			this.updateCurrentlyPlaying();
@@ -128,7 +129,7 @@ public class MusicPlayer {
 	//skip the current song and play the next one
 	public void skip(){
 		currentSong.setSkipped(true);
-		playlist.skipTrack();
+		PLAYLIST.skipTrack();
 		this.play();
 	}
 	
@@ -153,14 +154,12 @@ public class MusicPlayer {
 		SearchResult result = SearchEngine.getInstance().search(search);
 		MediaHelper.waitFor(result, 5);
 		//need these for later
-		ArrayList<String> temp = new ArrayList<String>();
 		List<Link> tempLinkResults = result.getTracksFound();
-		ArrayList<Track> results = new ArrayList<Track>();
+		ArrayList<Track> results = new ArrayList<>();
 		//move the search results into other arrays
 		int i = 0;
 		while (i < 10 && i < tempLinkResults.size()){
 			results.add(js.readTrack(tempLinkResults.get(i)));
-			temp.add(trackToString(results.get(i)));
 			i++;
 		}
 		return results;
@@ -197,12 +196,12 @@ public class MusicPlayer {
 	
 	//adds the given track to the playlist
 	public void addSong(Track track){
-		playlist.addToPlaylist(track);
+		PLAYLIST.addToPlaylist(track);
 	}
 
 	//return the playlist
 	public Playlist getPlaylist() {
-		return playlist;
+		return PLAYLIST;
 	}
 	
 	//return currently playing to the server (or notify there's nothing playing)

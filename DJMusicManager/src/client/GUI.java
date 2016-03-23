@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -33,20 +32,17 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 
-public class GUI extends JFrame{
+class GUI extends JFrame{
 	
 	private static final long serialVersionUID = 1L;
-	private JButton play, pause, search, addToPlaylist, skip;
 	private JLabel currentlyPlaying;
 	private Socket serverSocket, currentlyPlayingSocket;
 	private ObjectInputStream inFromServer, inFromCurrentlyPlaying;
 	private ObjectOutputStream outToServer;
 	private JTextField searchTarget;
-	private JPanel panel;
 	private JComboBox<String> searchResults;
-	private Executor pool = Executors.newFixedThreadPool(5);
 
-	
+
 	private GUI() throws IOException{
 		//preamble to set the frame up
 		super("DJ Music Manager");
@@ -59,11 +55,11 @@ public class GUI extends JFrame{
 		inFromCurrentlyPlaying = new ObjectInputStream(currentlyPlayingSocket.getInputStream());
 		
 		//setting up panel
-		panel = new JPanel();
+		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		
 		//sends a play request
-		play = new JButton("Play");
+		JButton play = new JButton("Play");
 		play.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -77,7 +73,7 @@ public class GUI extends JFrame{
 		});
 		
 		//sends a pause request
-		pause = new JButton("Pause");
+		JButton pause = new JButton("Pause");
 		pause.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -91,7 +87,7 @@ public class GUI extends JFrame{
 		});
 		
 		//sends a search request for what is typed in the box
-		search = new JButton("Search");
+		JButton search = new JButton("Search");
 		search.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -132,7 +128,7 @@ public class GUI extends JFrame{
 		searchResults = new JComboBox<>(defaultSearchResult);
 		
 		//send an add request
-		addToPlaylist = new JButton("Add to Playlist");
+		JButton addToPlaylist = new JButton("Add to Playlist");
 		addToPlaylist.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -146,7 +142,7 @@ public class GUI extends JFrame{
 		});
 		
 		//send a skip request
-		skip = new JButton("Skip");
+		JButton skip = new JButton("Skip");
 		skip.addActionListener(new ActionListener(){
 			@Override
 			public void actionPerformed(ActionEvent e){
@@ -204,6 +200,7 @@ public class GUI extends JFrame{
 				}
 			}
 		};
+		Executor pool = Executors.newFixedThreadPool(5);
 		pool.execute(r);
 	}
 	

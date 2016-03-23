@@ -30,14 +30,11 @@ public class DJServer {
 	private boolean playlistInit = false;
 	private boolean started = false;
 	private int skipRequestCount;
-	private final int SKIP_THRESHOLD = 3;
-	private ArrayList<ServerProxy> proxies;
-	private Executor pool = Executors.newCachedThreadPool();
+	private final ArrayList<ServerProxy> PROXIES = new ArrayList<>();
+	private final Executor POOL = Executors.newCachedThreadPool();
 
 	
 	private DJServer() throws IOException{
-		
-		proxies = new ArrayList<>();
 		
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
@@ -67,12 +64,12 @@ public class DJServer {
 				}
 			}
 		};
-		pool.execute(r);
+		POOL.execute(r);
 		
 	}
 	
 	private void proxy() throws IOException{
-		proxies.add(new ServerProxy(server,this));
+		PROXIES.add(new ServerProxy(server,this));
 	}
 
 	//sends a play request to the MusicPlayer if not started and playlist is initialized
@@ -96,6 +93,7 @@ public class DJServer {
 	//sends a skip request to the MusicPlayer once 3 skipRequests are received
 	void skip(){
 		skipRequestCount++;
+		int SKIP_THRESHOLD = 3;
 		if (skipRequestCount >= SKIP_THRESHOLD) {
 			player.skip();
 		}
@@ -119,7 +117,7 @@ public class DJServer {
 	
 	//sends an update request to each proxy
 	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
-		for (ServerProxy proxy : proxies) {
+		for (ServerProxy proxy : PROXIES) {
 			proxy.updateCurrentlyPlaying(currentlyPlaying);
 			proxy.resetSkipRequested();
 		}
@@ -147,6 +145,6 @@ public class DJServer {
 	}
 
 	void removeProxy(ServerProxy serverProxy) {
-		proxies.remove(serverProxy);
+		PROXIES.remove(serverProxy);
 	}
 }
