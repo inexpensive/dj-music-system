@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-public class ServerProxy {
+class ServerProxy {
 	
 	private ServerSocket server;
 	private Socket controlSocket, currentlyPlayingSocket;
@@ -62,21 +62,21 @@ public class ServerProxy {
 	}
 	
 	//sends an update request to the client to update the currently playing song
-	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
+	void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
 		outToCurrentlyPlaying.writeObject(currentlyPlaying);
 		skipRequested = false;
 	}
 	
-	public void close(){
+	private void close(){
 		djServer.removeProxy(this);
 	}
 	
-	public void resetSkipRequested(){
+	void resetSkipRequested(){
 		skipRequested = false;
 	}
 	
 	//listens for commands from the client
-		protected void listener() throws IOException, ClassNotFoundException {
+		private void listener() throws IOException, ClassNotFoundException {
 			System.out.println("NOW RUNNING");
 			String command;
 			boolean done = false;
@@ -108,8 +108,8 @@ public class ServerProxy {
 				//and sends the results to the client
 				case "search":
 					String target = (String) inFromClient.readObject();
-					results = djServer.search(target);
-					String[] out = new String[results.size()];
+                    results = djServer.search(target);
+                    String[] out = new String[results.size()];
 					for (int i = 0; i < results.size(); i++){
 						out[i] = djServer.trackToString(results.get(i));
 					}
@@ -118,7 +118,7 @@ public class ServerProxy {
 						
 				//sends the taken in index to the server and initializes playlist boolean if not initialized
 				case "add":
-					Track track = results.get(((Integer) inFromClient.readObject()).intValue());
+					Track track = results.get((Integer) inFromClient.readObject());
 					djServer.add(track);
 					break;
 					

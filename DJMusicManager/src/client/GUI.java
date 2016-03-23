@@ -41,15 +41,13 @@ public class GUI extends JFrame{
 	private Socket serverSocket, currentlyPlayingSocket;
 	private ObjectInputStream inFromServer, inFromCurrentlyPlaying;
 	private ObjectOutputStream outToServer;
-	
-	protected JTextField searchTarget;
-	protected JPanel panel;
-	protected JComboBox<String> searchResults;
-	protected Executor pool = Executors.newFixedThreadPool(5);
-
+	private JTextField searchTarget;
+	private JPanel panel;
+	private JComboBox<String> searchResults;
+	private Executor pool = Executors.newFixedThreadPool(5);
 
 	
-	public GUI() throws UnknownHostException, IOException{
+	private GUI() throws IOException{
 		//preamble to set the frame up
 		super("DJ Music Manager");
 			
@@ -131,7 +129,7 @@ public class GUI extends JFrame{
 		//setup default search result
 		String[] defaultSearchResult = new String[1];
 		defaultSearchResult[0] = "Search first by";
-		searchResults = new JComboBox<String>(defaultSearchResult);
+		searchResults = new JComboBox<>(defaultSearchResult);
 		
 		//send an add request
 		addToPlaylist = new JButton("Add to Playlist");
@@ -212,35 +210,34 @@ public class GUI extends JFrame{
 	
 	private String getCurrentlyPlaying() throws IOException, ClassNotFoundException {
 		outToServer.writeObject("curr");
-		String curr = (String) inFromServer.readObject();
-		return curr;
+		return (String) inFromServer.readObject();
 	}
 
 
 	//sends an add request and the index of the song to be added to the server
-	protected void addSong(int index) throws IOException {
+	private void addSong(int index) throws IOException {
 		outToServer.writeObject("add");
-		outToServer.writeObject(Integer.valueOf(index));
+		outToServer.writeObject(index);
 	}
 
 	//sends a play request to the server
-	protected void play() throws IOException {
+	private void play() throws IOException {
 		outToServer.writeObject("play");
 		
 	}
 	
 	//sends a skip request to the server
-	protected void skip() throws IOException {
+	private void skip() throws IOException {
 		outToServer.writeObject("skip");
 	}
 	
 	//sends a pause request to the server
-	protected void pause() throws IOException {
+	private void pause() throws IOException {
 		outToServer.writeObject("pause");
 	}
 	
 	//sends a close request to the server
-	protected void closeServer() throws IOException {
+	private void closeServer() throws IOException {
 		outToServer.writeObject("close");
 		serverSocket.close();
 		currentlyPlayingSocket.close();
@@ -248,13 +245,14 @@ public class GUI extends JFrame{
 	}
 
 	//displays the GUI
-	public void display(){
+	private void display(){
 		this.pack();
 		this.setVisible(true);
 	}
 	
 	//update the currently playing label with the passed in string from the server
-	public void updateCurrentlyPlaying() throws ClassNotFoundException, IOException{
+	@SuppressWarnings("InfiniteLoopStatement")
+	private void updateCurrentlyPlaying() throws ClassNotFoundException, IOException{
 		while(true){
 			String deets = (String) inFromCurrentlyPlaying.readObject();
 			currentlyPlaying.setText(deets);
@@ -264,11 +262,13 @@ public class GUI extends JFrame{
 	
 	//sends a search request to the server along with a target string
 	//receives a string array of results from the server and passes it to the combobox
-	protected void search(String text) throws IOException, ClassNotFoundException {
-		outToServer.writeObject("search");
-		outToServer.writeObject(searchTarget.getText());
-		String[] results = (String[]) inFromServer.readObject();
-		this.updateSearchComboBox(results);
+	private void search(String text) throws IOException, ClassNotFoundException {
+        if (!text.equalsIgnoreCase("")){
+            outToServer.writeObject("search");
+            outToServer.writeObject(searchTarget.getText());
+            String[] results = (String[]) inFromServer.readObject();
+            this.updateSearchComboBox(results);
+        }
 	}
 	
 	//fill the combo box with results from the search
@@ -283,7 +283,7 @@ public class GUI extends JFrame{
 	
 	
 	//main method (create a GUI frame)
-	public static void main(String[] args) throws UnknownHostException, IOException {
+	public static void main(String[] args) throws IOException {
 		// make a frame
 		GUI g;
 		g = new GUI();

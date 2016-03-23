@@ -32,13 +32,12 @@ public class DJServer {
 	private int skipRequestCount;
 	private final int SKIP_THRESHOLD = 3;
 	private ArrayList<ServerProxy> proxies;
-	
-	protected Executor pool = Executors.newCachedThreadPool();
+	private Executor pool = Executors.newCachedThreadPool();
 
 	
-	public DJServer() throws IOException{
+	private DJServer() throws IOException{
 		
-		proxies = new ArrayList<ServerProxy>();
+		proxies = new ArrayList<>();
 		
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
@@ -47,7 +46,7 @@ public class DJServer {
 		System.out.print("username: ");
 		String username = in.next();
 		System.out.print("password: ");
-		String password = in.next(); //TODO: mask this
+		String password = in.next(); //TODO: mask this using the Console class, which doesn't work with javaw (which is what IDEs use)
 		player.login(username, password);
 		skipRequestCount = 0;
 		in.close();
@@ -56,7 +55,7 @@ public class DJServer {
 		
 	}
 	
-	public void createNewProxy() {
+	 void createNewProxy() {
 		Runnable r = new Runnable(){
 			@Override
 			public void run(){
@@ -72,13 +71,13 @@ public class DJServer {
 		
 	}
 	
-	protected void proxy() throws IOException{
+	private void proxy() throws IOException{
 		proxies.add(new ServerProxy(server,this));
 	}
 
 	//sends a play request to the MusicPlayer if not started and playlist is initialized
 	//calls pause if the system is paused
-	public void play(){
+	 void play(){
 		if (!started && playlistInit) {
 			player.play();
 			started = true;
@@ -89,18 +88,13 @@ public class DJServer {
 	}
 	
 	//sends a pause request to the MusicPlayer	
-	public void pause(){
+	void pause(){
 		player.pause();
-		if (paused) {
-			paused = false;
-		}
-		else {
-			paused = true;
-		}
+		paused = !paused;
 	}
 	
 	//sends a skip request to the MusicPlayer once 3 skipRequests are received
-	public void skip(){
+	void skip(){
 		skipRequestCount++;
 		if (skipRequestCount >= SKIP_THRESHOLD) {
 			player.skip();
@@ -113,9 +107,8 @@ public class DJServer {
 	}
 	
 	//sends a search to the music player and sends back the results to the proxy
-	public ArrayList<Track> search(String target){
-		ArrayList<Track> results = player.search(target);
-		return results;
+	ArrayList<Track> search(String target){
+		return player.search(target);
 	}
 	
 	//closes the server
@@ -126,9 +119,9 @@ public class DJServer {
 	
 	//sends an update request to each proxy
 	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
-		for (int i = 0; i < proxies.size(); i++){
-			proxies.get(i).updateCurrentlyPlaying(currentlyPlaying);
-			proxies.get(i).resetSkipRequested();
+		for (ServerProxy proxy : proxies) {
+			proxy.updateCurrentlyPlaying(currentlyPlaying);
+			proxy.resetSkipRequested();
 		}
 		skipRequestCount = 0;
 	}
@@ -138,23 +131,22 @@ public class DJServer {
 			new DJServer();
 	}
 	//sends the taken in index to the MusicPlayer and initializes playlist boolean if not initialized
-	public void add(Track track) {
+	void add(Track track) {
 		player.addSong(track);
 		if (!playlistInit) {
 			playlistInit = true;
 		}		
 	}
 
-	public String trackToString(Track track) {
-		// TODO Auto-generated method stub
+	String trackToString(Track track) {
 		return player.trackToString(track);
 	}
 
-	public String getCurrentlyPlaying() {		
+	String getCurrentlyPlaying() {
 		return player.getCurrentlyPlaying();
 	}
 
-	public void removeProxy(ServerProxy serverProxy) {
+	void removeProxy(ServerProxy serverProxy) {
 		proxies.remove(serverProxy);
 	}
 }
