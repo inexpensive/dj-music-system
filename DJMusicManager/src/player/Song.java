@@ -1,24 +1,14 @@
 package player;
 
-import jahspotify.media.Track;
+abstract class Song {
 
-class Song {
+	enum Source {
+		LOCAL, SPOTIFY
+	}
 
-	private Track track;
 	private boolean skipped;
-	
-	Song(Track t){
-		setTrack(t);
-		setSkipped(false);
-	}
 
-	Track getTrack() {
-		return track;
-	}
-
-	private void setTrack(Track track) {
-		this.track = track;
-	}
+    abstract public Source getSource();
 
 	boolean isSkipped() {
 		return skipped;

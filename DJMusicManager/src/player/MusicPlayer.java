@@ -40,19 +40,19 @@ public class MusicPlayer {
 	private String artistName;
 	private String albumName;
 	private int duration;
-	private final Playlist PLAYLIST;
+	private final Playlist playlist;
 	private Song currentSong;
 	private DJServer server;
 
 	private final Executor POOL = Executors.newCachedThreadPool();
 	
 	public MusicPlayer(DJServer s){
-		PLAYLIST = new Playlist();
+		playlist = new Playlist();
 		server = s;
 	}
 	
 	private MusicPlayer(Playlist pl){
-		PLAYLIST = pl;
+		playlist = pl;
 	}
 	
 	//this has to be called first before anything else
@@ -90,46 +90,47 @@ public class MusicPlayer {
         });
 	}
 	
-	//play the current song in the PLAYLIST
+	//play the current song in the playlist
 	public void play(){
-		Track track = PLAYLIST.getCurrentTrack();
-		MediaHelper.waitFor(track, 10);
-		if (track.isLoaded()){
-			js.play(track.getId());
-			this.updateTrackDetails(track);
-		}
-		duration = track.getLength();
-		currentSong = new Song(track);
-		//this avoids a bug with searching (it should be undetectable to the ear)
-		//for whatever reason pausing and unpausing the player prevents the bug
-		js.pause();
-		try {
-			TimeUnit.SECONDS.sleep(1);
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		js.resume();
-		Runnable r = new Runnable(){
-			@Override
-			public void run(){
-				autoSkip();
-			}
-		};
-		POOL.execute(r);
-		//send the currently song to the server
-		try {
-			this.updateCurrentlyPlaying();
-		} 
-		catch (IOException e) {
-			e.printStackTrace();
-		}
+		currentSong = playlist.getCurrentSong();
+        if (currentSong.getSource() == Song.Source.SPOTIFY) {
+            Track track = ((SpotifySong)currentSong).getTrack();
+            MediaHelper.waitFor(track, 10);
+            if (track.isLoaded()) {
+                js.play(track.getId());
+                this.updateTrackDetails(track);
+            }
+            duration = track.getLength();
+            currentSong = new SpotifySong(track);
+            //this avoids a bug with searching (it should be undetectable to the ear)
+            //for whatever reason pausing and unpausing the player prevents the bug
+            js.pause();
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            js.resume();
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    autoSkip();
+                }
+            };
+            POOL.execute(r);
+            //send the currently song to the server
+            try {
+                this.updateCurrentlyPlaying();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
 	}
 	
 	//skip the current song and play the next one
 	public void skip(){
 		currentSong.setSkipped(true);
-		PLAYLIST.skipTrack();
+		playlist.skipTrack();
 		this.play();
 	}
 	
@@ -194,20 +195,23 @@ public class MusicPlayer {
 		return albumName;
 	}
 	
-	//adds the given track to the playlist
-	public void addSong(Track track){
-		PLAYLIST.addToPlaylist(track);
+	//adds the given song to the playlist
+	public void addSong(Song song){
+		playlist.addToPlaylist(song);
 	}
+
+    //adds the given spotify track as a song to the playlist
+    public void addSong(Track track) { playlist.addToPlaylist(new SpotifySong(track));}
 
 	//return the playlist
 	public Playlist getPlaylist() {
-		return PLAYLIST;
+		return playlist;
 	}
 	
 	//return currently playing to the server (or notify there's nothing playing)
 	public String getCurrentlyPlaying(){
 		if (currentSong != null)
-			return this.trackToString(currentSong.getTrack());
+			return this.trackToString(((SpotifySong) currentSong).getTrack());
 		return "No Song Loaded";
 	}
 	
@@ -230,8 +234,13 @@ public class MusicPlayer {
 	
 	//send an update currently playing song request to the server
 	private void updateCurrentlyPlaying() throws IOException {
-		
-		String currentlyPlaying = this.trackToString(currentSong.getTrack());
+		String currentlyPlaying = null;
+		if (currentSong.getSource() == Song.Source.SPOTIFY) {
+			currentlyPlaying = this.trackToString(((SpotifySong) currentSong).getTrack());
+		}
+        else if (currentSong.getSource() == Song.Source.LOCAL){
+            currentlyPlaying = ((LocalSong) currentSong).getFileLocation(); //TODO: pull the track details from the file
+        }
 		server.updateCurrentlyPlaying(currentlyPlaying);
 	}
 	

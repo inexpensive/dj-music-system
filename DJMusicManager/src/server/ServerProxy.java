@@ -13,32 +13,32 @@ package server;
 
 import jahspotify.media.Track;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 class ServerProxy {
 
-	private final DJServer DJ_SERVER;
+	private final DJServer djServer;
 	private ObjectOutputStream outToClient, outToCurrentlyPlaying;
 	private ObjectInputStream inFromClient;
 	private ArrayList<Track> results;
 	private boolean skipRequested;
 
 	
-	ServerProxy(ServerSocket ser, DJServer DJ_SERVER) throws IOException{
+	ServerProxy(ServerSocket ser, DJServer djServer) throws IOException{
 		//setting up the socket to accept a connection from a client
-		this.DJ_SERVER = DJ_SERVER;
+		this.djServer = djServer;
 		Socket controlSocket = ser.accept();
 		Socket currentlyPlayingSocket = ser.accept();
 		skipRequested = false;
 		System.out.println("CONNECTION ESTABLISHED");
-		DJ_SERVER.createNewProxy();
+		djServer.createNewProxy();
 		outToClient = new ObjectOutputStream(controlSocket.getOutputStream());
 		inFromClient = new ObjectInputStream(controlSocket.getInputStream());
 		outToCurrentlyPlaying = new ObjectOutputStream(currentlyPlayingSocket.getOutputStream());
@@ -49,9 +49,14 @@ class ServerProxy {
 				try {
 					listener();
 				} 
-				catch (ClassNotFoundException | IOException e) {
+				catch (ClassNotFoundException e) {
 					e.printStackTrace();
 				}
+                catch (IOException e){
+                    System.out.println("caught IOException. closing server");
+                    e.printStackTrace();
+                    close();
+                }
 			}
 		};
 		Executor pool = Executors.newCachedThreadPool();
@@ -65,7 +70,7 @@ class ServerProxy {
 	}
 	
 	private void close(){
-		DJ_SERVER.removeProxy(this);
+		djServer.removeProxy(this);
 	}
 	
 	void resetSkipRequested(){
@@ -75,28 +80,35 @@ class ServerProxy {
 	//listens for commands from the client
 		private void listener() throws IOException, ClassNotFoundException {
 			System.out.println("NOW RUNNING");
-			String command;
+			String command = "";
 			boolean done = false;
 			while(!done){
 				System.out.println("waiting for input...");
-				command = (String) inFromClient.readObject();
+				try{
+					command = (String) inFromClient.readObject();
+				}
+				catch (EOFException e){
+                    System.out.println("caught EOFException. closing server");
+                    this.close();
+                    done = true;
+                }
 				System.out.println("received " + command);
 				switch (command) {
 					
 				//sends a play request to the server
 				case "play":
-					DJ_SERVER.play();
+					djServer.play();
 					break;
 						
 				//sends a pause request to the server	
 				case "pause":
-					DJ_SERVER.pause();
+					djServer.pause();
 					break;
 						
 				//sends a skip request to the server
 				case "skip":
 					if(!skipRequested) {
-						DJ_SERVER.skip();
+						djServer.skip();
 						skipRequested = true;
 					}
 					break;
@@ -105,10 +117,10 @@ class ServerProxy {
 				//and sends the results to the client
 				case "search":
 					String target = (String) inFromClient.readObject();
-                    results = DJ_SERVER.search(target);
+                    results = djServer.search(target);
                     String[] out = new String[results.size()];
 					for (int i = 0; i < results.size(); i++){
-						out[i] = DJ_SERVER.trackToString(results.get(i));
+						out[i] = djServer.trackToString(results.get(i));
 					}
 					outToClient.writeObject(out);
 					break;
@@ -116,11 +128,11 @@ class ServerProxy {
 				//sends the taken in index to the server and initializes playlist boolean if not initialized
 				case "add":
 					Track track = results.get((Integer) inFromClient.readObject());
-					DJ_SERVER.add(track);
+					djServer.add(track);
 					break;
 					
 				case "curr":
-					String curr = DJ_SERVER.getCurrentlyPlaying();
+					String curr = djServer.getCurrentlyPlaying();
 					outToClient.writeObject(curr);
 					break;
 						
@@ -129,6 +141,16 @@ class ServerProxy {
 					this.close();
 					done = true;
 					break;
+
+				case "message":
+					File test = new File("/home/lawrence/Documents/School/test.3gp");
+                    byte[] myByteArray = (byte[]) inFromClient.readObject();
+                    FileOutputStream fos = new FileOutputStream(test);
+                    BufferedOutputStream bos = new BufferedOutputStream(fos);
+                    bos.write(myByteArray, 0 , myByteArray.length);
+                    bos.flush();
+                    bos.close();
+
 				}
 			}
 			

@@ -6,18 +6,18 @@ import java.util.LinkedList;
 
 class Playlist {
 	
-	private final LinkedList<Track>  trackList = new LinkedList<>();
-	private Track currentTrack;
+	private final LinkedList<Song>  trackList = new LinkedList<>();
+	private Song currentSong;
 	
 	Playlist(){
-		currentTrack = null;
+		currentSong = null;
 	}
 	
 	//adds a song to the playlist. if nothing is currently playing, add to currently playing
 	//otherwise add to the trackList
-	void addToPlaylist(Track addTrack){
-		if (currentTrack == null){
-			currentTrack = addTrack;
+	void addToPlaylist(Song addTrack){
+		if (currentSong == null){
+			currentSong = addTrack;
 		}
 		else{
 			trackList.add(addTrack);
@@ -28,12 +28,12 @@ class Playlist {
 	//if there is no element in the playlist, it does nothing
 	void skipTrack(){
 		if (!trackList.isEmpty()){
-			currentTrack = trackList.remove();
+			currentSong = trackList.remove();
 		}
 	}
 	
-	Track getCurrentTrack(){
-		return currentTrack;
+	Song getCurrentSong(){
+		return currentSong;
 	}
 
 }
