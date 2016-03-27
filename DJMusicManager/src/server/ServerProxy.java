@@ -163,7 +163,7 @@ class ServerProxy {
 
                 //directly skip the currently playing song
                 case "adminSkip":
-                    djServer.skip();
+                    djServer.adminSkip();
                 break;
 
 

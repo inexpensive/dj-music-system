@@ -156,4 +156,8 @@ public class DJServer {
     boolean checkPassword(String check){
         return password.contentEquals(check);
     }
+
+    void adminSkip() {
+        player.skip();
+    }
 }
