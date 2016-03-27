@@ -1,7 +1,5 @@
 package player;
 
-import jahspotify.media.Track;
-
 import java.util.LinkedList;
 
 class Playlist {

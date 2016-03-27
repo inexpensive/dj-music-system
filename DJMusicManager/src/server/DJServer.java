@@ -21,6 +21,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import player.MusicPlayer;
+import sun.security.util.Password;
 
 public class DJServer {
 	
@@ -32,10 +33,14 @@ public class DJServer {
 	private int skipRequestCount;
 	private final ArrayList<ServerProxy> proxies = new ArrayList<>();
 	private final Executor pool = Executors.newCachedThreadPool();
+	private final String password;
 
 	
-	private DJServer() throws IOException{
-		
+	private DJServer(String pass) throws IOException{
+
+        //set the password for the server
+        password = pass;
+
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
 		player = new MusicPlayer(this);
@@ -43,8 +48,8 @@ public class DJServer {
 		System.out.print("username: ");
 		String username = in.next();
 		System.out.print("password: ");
-		String password = in.next(); //TODO: mask this using the Console class, which doesn't work with javaw (which is what IDEs use)
-		player.login(username, password);
+		String spotifyPassword = in.next(); //TODO: mask this using the Console class, which doesn't work with javaw (which is what IDEs use)
+		player.login(username, spotifyPassword);
 		skipRequestCount = 0;
 		in.close();
 		
@@ -126,7 +131,7 @@ public class DJServer {
 	
 	//start the server!
 	public static void main(String[] args) throws IOException{
-			new DJServer();
+			new DJServer("password");
 	}
 	//sends the taken in index to the MusicPlayer and initializes playlist boolean if not initialized
 	void add(Track track) {
@@ -147,4 +152,8 @@ public class DJServer {
 	void removeProxy(ServerProxy serverProxy) {
 		proxies.remove(serverProxy);
 	}
+
+    boolean checkPassword(String check){
+        return password.contentEquals(check);
+    }
 }

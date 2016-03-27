@@ -3,7 +3,7 @@ package player;
 abstract class Song {
 
 	enum Source {
-		LOCAL, SPOTIFY
+		LOCAL, SPOTIFY, MESSAGE
 	}
 
 	private boolean skipped;

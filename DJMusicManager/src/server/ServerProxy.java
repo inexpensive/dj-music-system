@@ -16,9 +16,7 @@ import jahspotify.media.Track;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -93,17 +91,17 @@ class ServerProxy {
                     done = true;
                 }
 				System.out.println("received " + command);
-				switch (command) {
+				switch (command) { //maybe make this an ENUM?
 					
 				//sends a play request to the server
 				case "play":
 					djServer.play();
-					break;
+				break;
 						
 				//sends a pause request to the server	
 				case "pause":
 					djServer.pause();
-					break;
+				break;
 						
 				//sends a skip request to the server
 				case "skip":
@@ -111,7 +109,7 @@ class ServerProxy {
 						djServer.skip();
 						skipRequested = true;
 					}
-					break;
+				break;
 						
 				//sends the search target string to the server
 				//and sends the results to the client
@@ -123,25 +121,26 @@ class ServerProxy {
 						out[i] = djServer.trackToString(results.get(i));
 					}
 					outToClient.writeObject(out);
-					break;
+				break;
 						
 				//sends the taken in index to the server and initializes playlist boolean if not initialized
 				case "add":
 					Track track = results.get((Integer) inFromClient.readObject());
 					djServer.add(track);
-					break;
+				break;
 					
 				case "curr":
 					String curr = djServer.getCurrentlyPlaying();
 					outToClient.writeObject(curr);
-					break;
+				break;
 						
 				//closes the proxy
 				case "close":
 					this.close();
 					done = true;
-					break;
+				break;
 
+                //takes in a recorded .3gp file from the client and adds it to the playlist to be played
 				case "message":
 					File test = new File("/home/lawrence/Documents/School/test.3gp");
                     byte[] myByteArray = (byte[]) inFromClient.readObject();
@@ -150,6 +149,23 @@ class ServerProxy {
                     bos.write(myByteArray, 0 , myByteArray.length);
                     bos.flush();
                     bos.close();
+                break;
+
+                //take in a password and see if it is the password to the server
+                case "adminLogin":
+                    if (djServer.checkPassword((String)inFromClient.readObject())) {
+                        outToClient.writeObject(true);
+                    }
+                    else {
+                        outToClient.writeObject(false);
+                    }
+                break;
+
+                //directly skip the currently playing song
+                case "adminSkip":
+                    djServer.skip();
+                break;
+
 
 				}
 			}
