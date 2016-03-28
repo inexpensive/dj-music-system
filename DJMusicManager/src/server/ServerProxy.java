@@ -142,7 +142,7 @@ class ServerProxy {
 
                 //takes in a recorded .3gp file from the client and adds it to the playlist to be played
 				case "message":
-					File test = new File("/home/lawrence/Documents/School/test.3gp");
+					File test = new File("/home/lawrence/Documents/School/test.mp3");
                     byte[] myByteArray = (byte[]) inFromClient.readObject();
                     FileOutputStream fos = new FileOutputStream(test);
                     BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -165,6 +165,10 @@ class ServerProxy {
                 case "adminSkip":
                     djServer.adminSkip();
                 break;
+
+                case "playlist":
+                    String[] testCurr = djServer.getPlaylistDetails();
+                    outToClient.writeObject(testCurr);
 
 
 				}

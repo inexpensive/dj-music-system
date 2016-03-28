@@ -85,6 +85,7 @@ public class MusicPlayer {
                 }
                 else {
                 	System.out.println("you did it!");
+					playlist.setJahSpotify(js);
                 }
             }
         });
@@ -214,6 +215,10 @@ public class MusicPlayer {
 			return this.trackToString(((SpotifySong) currentSong).getTrack());
 		return "No Song Loaded";
 	}
+
+    public String[] getPlaylistDetails() {
+        return playlist.getPlaylistDetails();
+    }
 	
 	//automatically skips the track once it's over
 	//TODO: figure out how to freeze the sleep counter while the system is paused in order to not trigger the autoskip early

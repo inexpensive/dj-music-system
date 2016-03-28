@@ -149,6 +149,10 @@ public class DJServer {
 		return player.getCurrentlyPlaying();
 	}
 
+	String[] getPlaylistDetails() {
+		return player.getPlaylistDetails();
+	}
+
 	void removeProxy(ServerProxy serverProxy) {
 		proxies.remove(serverProxy);
 	}
