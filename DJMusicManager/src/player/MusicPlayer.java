@@ -39,7 +39,7 @@ public class MusicPlayer {
 	private String songTitle;
 	private String artistName;
 	private String albumName;
-	private int duration;
+	private long duration, elapsed;
 	private final Playlist playlist;
 	private Song currentSong;
 	private DJServer server;
@@ -224,16 +224,22 @@ public class MusicPlayer {
 	//TODO: figure out how to freeze the sleep counter while the system is paused in order to not trigger the autoskip early
 	private void autoSkip(){
 		Song tempSong = currentSong;
-		try {
-			TimeUnit.MILLISECONDS.sleep(duration);
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		//check if the song has been skipped by an external source
-		if (!tempSong.isSkipped()){
-			skip();
-		}
+        elapsed = 0;
+        while (elapsed < duration && !tempSong.isSkipped()) {
+            try {
+                if (!paused) {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                    elapsed += 100;
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println(elapsed);
+        }
+        //check if the song has been skipped by an external source
+        if (!tempSong.isSkipped()) {
+            skip();
+        }
 		System.out.println("auto skip thread ended");
 	}
 	
