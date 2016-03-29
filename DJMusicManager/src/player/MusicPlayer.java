@@ -119,12 +119,6 @@ public class MusicPlayer {
                 }
             };
             POOL.execute(r);
-            //send the currently song to the server
-            try {
-                this.updateCurrentlyPlaying();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
 	}
 	
@@ -225,34 +219,23 @@ public class MusicPlayer {
 	private void autoSkip(){
 		Song tempSong = currentSong;
         elapsed = 0;
+        server.sendUpdateElapsed(elapsed, duration);
         while (elapsed < duration && !tempSong.isSkipped()) {
             try {
                 if (!paused) {
                     TimeUnit.MILLISECONDS.sleep(100);
                     elapsed += 100;
+                    server.sendUpdateElapsed(elapsed, duration);
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            System.out.println(elapsed);
         }
         //check if the song has been skipped by an external source
         if (!tempSong.isSkipped()) {
             skip();
         }
 		System.out.println("auto skip thread ended");
-	}
-	
-	//send an update currently playing song request to the server
-	private void updateCurrentlyPlaying() throws IOException {
-		String currentlyPlaying = null;
-		if (currentSong.getSource() == Song.Source.SPOTIFY) {
-			currentlyPlaying = this.trackToString(((SpotifySong) currentSong).getTrack());
-		}
-        else if (currentSong.getSource() == Song.Source.LOCAL){
-            currentlyPlaying = ((LocalSong) currentSong).getFileLocation(); //TODO: pull the track details from the file
-        }
-		server.updateCurrentlyPlaying(currentlyPlaying);
 	}
 	
 }

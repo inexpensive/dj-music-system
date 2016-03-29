@@ -175,4 +175,13 @@ class ServerProxy {
 			}
 			
 		}
+
+    void updateElapsed(long elapsed, long duration) {
+        try {
+            int[] out = {(int) duration, (int) elapsed};
+            outToCurrentlyPlaying.writeObject(out);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

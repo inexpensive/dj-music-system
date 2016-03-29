@@ -120,14 +120,7 @@ public class DJServer {
 		System.exit(0);
 	}
 	
-	//sends an update request to each proxy
-	public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
-		for (ServerProxy proxy : proxies) {
-			proxy.updateCurrentlyPlaying(currentlyPlaying);
-			proxy.resetSkipRequested();
-		}
-		skipRequestCount = 0;
-	}
+
 	
 	//start the server!
 	public static void main(String[] args) throws IOException{
@@ -163,5 +156,21 @@ public class DJServer {
 
     void adminSkip() {
         player.skip();
+    }
+
+    //sends the elapsed time to the proxies
+	public void sendUpdateElapsed(long elapsed, long duration) {
+        for (ServerProxy proxy : proxies) {
+            proxy.updateElapsed(elapsed, duration);
+        }
+	}
+
+    //sends an update request to each proxy
+    public void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
+        for (ServerProxy proxy : proxies) {
+            proxy.updateCurrentlyPlaying(currentlyPlaying);
+            proxy.resetSkipRequested();
+        }
+        skipRequestCount = 0;
     }
 }
