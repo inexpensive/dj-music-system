@@ -22,7 +22,6 @@ import jahspotify.services.MediaHelper;
 import jahspotify.services.SearchEngine;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,12 +30,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import javafx.application.Application;
-import javafx.scene.Group;
-import javafx.scene.Scene;
+
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
-import javafx.stage.Stage;
 import server.DJServer;
 
 
@@ -157,8 +153,6 @@ public class MusicPlayer {
 
 
                 duration = new Double(localSong.getDuration().toMillis()).longValue();
-                System.out.println("Duration: "+ localSong.getDuration().toSeconds());
-                System.out.println("Duration: "+ duration);
 
                 // display media's metadata
                 for (Map.Entry<String, Object> entry : localSong.getMetadata().entrySet()){
@@ -183,8 +177,6 @@ public class MusicPlayer {
 
 
                 duration = new Double(message.getDuration().toMillis()).longValue();
-                System.out.println("Duration: "+ message.getDuration().toSeconds());
-                System.out.println("Duration: "+ duration);
 
                 // play if you want
                 mediaPlayer.play();

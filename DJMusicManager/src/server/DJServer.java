@@ -21,7 +21,6 @@ import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
-import javafx.application.Application;
 import javafx.scene.media.MediaPlayer;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
