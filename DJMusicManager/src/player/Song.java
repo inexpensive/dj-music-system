@@ -1,6 +1,6 @@
 package player;
 
-abstract class Song {
+public abstract class Song {
 
 	enum Source {
 		LOCAL, SPOTIFY, MESSAGE
@@ -9,6 +9,8 @@ abstract class Song {
 	private boolean skipped;
 
     abstract public Source getSource();
+
+	abstract public String getSongDetails();
 
 	boolean isSkipped() {
 		return skipped;

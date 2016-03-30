@@ -11,7 +11,7 @@
 
 package server;
 
-import jahspotify.media.Track;
+import player.Song;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -25,7 +25,7 @@ class ServerProxy {
 	private final DJServer djServer;
 	private ObjectOutputStream outToClient, outToCurrentlyPlaying;
 	private ObjectInputStream inFromClient;
-	private ArrayList<Track> results;
+	private ArrayList<Song> results;
 	private boolean skipRequested;
 
 	
@@ -41,22 +41,19 @@ class ServerProxy {
 		inFromClient = new ObjectInputStream(controlSocket.getInputStream());
 		outToCurrentlyPlaying = new ObjectOutputStream(currentlyPlayingSocket.getOutputStream());
 		//thread to wait for input from the client
-		Runnable r = new Runnable(){
-			@Override
-			public void run(){
-				try {
-					listener();
-				} 
-				catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				}
-                catch (IOException e){
-                    System.out.println("caught IOException. closing server");
-                    e.printStackTrace();
-                    close();
-                }
-			}
-		};
+		Runnable r = () -> {
+            try {
+                listener();
+            }
+            catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+catch (IOException e){
+System.out.println("caught IOException. closing server");
+e.printStackTrace();
+close();
+}
+        };
 		Executor pool = Executors.newCachedThreadPool();
 		pool.execute(r);
 	}
@@ -118,15 +115,15 @@ class ServerProxy {
                     results = djServer.search(target);
                     String[] out = new String[results.size()];
 					for (int i = 0; i < results.size(); i++){
-						out[i] = djServer.trackToString(results.get(i));
+						out[i] = results.get(i).getSongDetails();
 					}
 					outToClient.writeObject(out);
 				break;
 						
 				//sends the taken in index to the server and initializes playlist boolean if not initialized
 				case "add":
-					Track track = results.get((Integer) inFromClient.readObject());
-					djServer.add(track);
+					Song song = results.get((Integer) inFromClient.readObject());
+					djServer.add(song);
 				break;
 					
 				case "curr":
@@ -140,19 +137,15 @@ class ServerProxy {
 					done = true;
 				break;
 
-                //takes in a recorded .3gp file from the client and adds it to the playlist to be played
+                //takes in a recorded .mp4 file from the client and adds it to the playlist to be played
 				case "message":
-					File test = new File("/home/lawrence/Documents/School/test.mp3");
                     byte[] myByteArray = (byte[]) inFromClient.readObject();
-                    FileOutputStream fos = new FileOutputStream(test);
-                    BufferedOutputStream bos = new BufferedOutputStream(fos);
-                    bos.write(myByteArray, 0 , myByteArray.length);
-                    bos.flush();
-                    bos.close();
+					djServer.processMessage(myByteArray);
                 break;
 
                 //take in a password and see if it is the password to the server
                 case "adminLogin":
+
                     if (djServer.checkPassword((String)inFromClient.readObject())) {
                         outToClient.writeObject(true);
                     }
@@ -169,6 +162,10 @@ class ServerProxy {
                 case "playlist":
                     String[] testCurr = djServer.getPlaylistDetails();
                     outToClient.writeObject(testCurr);
+                break;
+
+                case "playing":
+                    outToClient.writeObject(djServer.isStarted());
 
 
 				}

@@ -14,6 +14,11 @@ public class Message extends Song{
         return Source.MESSAGE;
     }
 
+    @Override
+    public String getSongDetails() {
+        return "A recorded message.";
+    }
+
     String getFileLocation(){
         return fileLocation;
     }

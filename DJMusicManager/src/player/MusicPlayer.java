@@ -23,12 +23,20 @@ import jahspotify.services.SearchEngine;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.stage.Stage;
 import server.DJServer;
 
 
@@ -43,16 +51,37 @@ public class MusicPlayer {
 	private final Playlist playlist;
 	private Song currentSong;
 	private DJServer server;
+	private MediaPlayer mediaPlayer;
 
 	private final Executor POOL = Executors.newCachedThreadPool();
 	
-	public MusicPlayer(DJServer s){
+	public MusicPlayer(DJServer s, MediaPlayer mediaP){
 		playlist = new Playlist();
 		server = s;
+		mediaPlayer = mediaP;
 	}
 	
 	private MusicPlayer(Playlist pl){
 		playlist = pl;
+	}
+
+	public void testPlayLocal(){
+		String song = Paths.get("/home/lawrence/Documents/School/Taylor Swift – 1989/02 Blank Space.m4a").toUri().toString();
+		final Media file = new Media(song);
+		mediaPlayer = new MediaPlayer(file);
+
+		mediaPlayer.setOnReady(() -> {
+
+            System.out.println("Duration: "+file.getDuration().toSeconds());
+
+            // display media's metadata
+            for (Map.Entry<String, Object> entry : file.getMetadata().entrySet()){
+                System.out.println(entry.getKey() + ": " + entry.getValue());
+            }
+
+            // play if you want
+            mediaPlayer.play();
+        });
 	}
 	
 	//this has to be called first before anything else
@@ -94,6 +123,8 @@ public class MusicPlayer {
 	//play the current song in the playlist
 	public void play(){
 		currentSong = playlist.getCurrentSong();
+
+		//if the song is from spotify
         if (currentSong.getSource() == Song.Source.SPOTIFY) {
             Track track = ((SpotifySong)currentSong).getTrack();
             MediaHelper.waitFor(track, 10);
@@ -102,7 +133,6 @@ public class MusicPlayer {
                 this.updateTrackDetails(track);
             }
             duration = track.getLength();
-            currentSong = new SpotifySong(track);
             //this avoids a bug with searching (it should be undetectable to the ear)
             //for whatever reason pausing and unpausing the player prevents the bug
             js.pause();
@@ -112,38 +142,99 @@ public class MusicPlayer {
                 e.printStackTrace();
             }
             js.resume();
-            Runnable r = new Runnable() {
-                @Override
-                public void run() {
-                    autoSkip();
-                }
-            };
-            POOL.execute(r);
+
+			Runnable r = this::autoSkip;
+			POOL.execute(r);
+
         }
+		//if the song is local
+		else if (currentSong.getSource() == Song.Source.LOCAL) {
+			String songPath = Paths.get(((LocalSong) currentSong).getFileLocation()).toUri().toString();
+			Media localSong = new Media(songPath);
+			mediaPlayer = new MediaPlayer(localSong);
+
+			mediaPlayer.setOnReady(() -> {
+
+
+                duration = new Double(localSong.getDuration().toMillis()).longValue();
+                System.out.println("Duration: "+ localSong.getDuration().toSeconds());
+                System.out.println("Duration: "+ duration);
+
+                // display media's metadata
+                for (Map.Entry<String, Object> entry : localSong.getMetadata().entrySet()){
+                    System.out.println(entry.getKey() + ": " + entry.getValue());
+                }
+
+                // play if you want
+                mediaPlayer.play();
+
+                Runnable r = this::autoSkip;
+                POOL.execute(r);
+            });
+		}
+
+		//if the song is a message
+		else if (currentSong.getSource() == Song.Source.MESSAGE) {
+			String songPath = Paths.get(((Message) currentSong).getFileLocation()).toUri().toString();
+			Media message = new Media(songPath);
+			mediaPlayer = new MediaPlayer(message);
+
+			mediaPlayer.setOnReady(() -> {
+
+
+                duration = new Double(message.getDuration().toMillis()).longValue();
+                System.out.println("Duration: "+ message.getDuration().toSeconds());
+                System.out.println("Duration: "+ duration);
+
+                // play if you want
+                mediaPlayer.play();
+
+                Runnable r = this::autoSkip;
+                POOL.execute(r);
+            });
+		}
+
+
 	}
 	
 	//skip the current song and play the next one
 	public void skip(){
 		currentSong.setSkipped(true);
 		playlist.skipTrack();
+		//if the song is from spotify, stop JavaFX
+		if(currentSong.getSource() == Song.Source.LOCAL || currentSong.getSource() == Song.Source.MESSAGE){
+			mediaPlayer.stop();
+		}
+		//otherwise do nothing
+
 		this.play();
 	}
 	
 	//toggle pausing and unpausing of the song
 	public void pause(){
 		if (!paused){
-			js.pause();
+			if (currentSong.getSource() == Song.Source.SPOTIFY) {
+				js.pause();
+			}
+			else {
+				mediaPlayer.pause();
+			}
 			paused = true;
 		}
 		else{
-			js.resume();
+			if (currentSong.getSource() == Song.Source.SPOTIFY) {
+				js.resume();
+			}
+			else {
+				mediaPlayer.play();
+			}
 			paused = false;
 		}
 	}
 	
-	//search for the target string and output results as a Track ArrayList
+	//search for the target string and output results as a Song ArrayList
 	//maxes at 10 elements
-	public ArrayList<Track> search(String target){
+	public ArrayList<Song> search(String target){
 		
 		//search for the target
 		Search search = new Search(Query.token(target));
@@ -151,11 +242,15 @@ public class MusicPlayer {
 		MediaHelper.waitFor(result, 5);
 		//need these for later
 		List<Link> tempLinkResults = result.getTracksFound();
-		ArrayList<Track> results = new ArrayList<>();
+		ArrayList<Song> results = new ArrayList<>();
 		//move the search results into other arrays
 		int i = 0;
 		while (i < 10 && i < tempLinkResults.size()){
-			results.add(js.readTrack(tempLinkResults.get(i)));
+			Track track = js.readTrack(tempLinkResults.get(i));
+			String title = track.getTitle();
+			String artist = js.readArtist(track.getArtists().get(0)).getName();
+			String album = js.readAlbum(track.getAlbum()).getName();
+			results.add(new SpotifySong(track, title, artist, album));
 			i++;
 		}
 		return results;
@@ -194,9 +289,6 @@ public class MusicPlayer {
 	public void addSong(Song song){
 		playlist.addToPlaylist(song);
 	}
-
-    //adds the given spotify track as a song to the playlist
-    public void addSong(Track track) { playlist.addToPlaylist(new SpotifySong(track));}
 
 	//return the playlist
 	public Playlist getPlaylist() {
@@ -237,5 +329,6 @@ public class MusicPlayer {
         }
 		System.out.println("auto skip thread ended");
 	}
-	
+
+
 }

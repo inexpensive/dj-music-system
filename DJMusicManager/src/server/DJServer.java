@@ -13,17 +13,24 @@ package server;
 
 import jahspotify.media.Track;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import javafx.application.Application;
+import javafx.scene.media.MediaPlayer;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
+import player.LocalSong;
+import player.Message;
 import player.MusicPlayer;
-import sun.security.util.Password;
+import player.Song;
 
-public class DJServer {
+public class DJServer{
 	
 	private ServerSocket server;
 	private MusicPlayer player;
@@ -34,16 +41,17 @@ public class DJServer {
 	private final ArrayList<ServerProxy> proxies = new ArrayList<>();
 	private final Executor pool = Executors.newCachedThreadPool();
 	private final String password;
+    private ArrayList<LocalSong> localSongs = new ArrayList<>();
 
 	
-	private DJServer(String pass) throws IOException{
+	DJServer(String pass, MediaPlayer mediaPlayer) throws IOException{
 
         //set the password for the server
         password = pass;
 
 		//set up server and allow a client to connect
 		server = new ServerSocket(1729);
-		player = new MusicPlayer(this);
+		player = new MusicPlayer(this, mediaPlayer);
 		Scanner in = new Scanner(System.in);
 		System.out.print("username: ");
 		String username = in.next();
@@ -52,23 +60,36 @@ public class DJServer {
 		player.login(username, spotifyPassword);
 		skipRequestCount = 0;
 		in.close();
+
+        //add all local songs to the server
+        File songFolder = new File("/home/lawrence/Documents/School/Taylor Swift – 1989/");
+        File[] listOfSongs = songFolder.listFiles();
+        if (listOfSongs != null) {
+            for (File file : listOfSongs) {
+                String path = file.getAbsolutePath();
+                String ext = FilenameUtils.getExtension(path);
+                if (validExtension(ext))
+                    localSongs.add(new LocalSong(path));
+            }
+        }
 		
 		this.createNewProxy();
 		
 	}
-	
-	 void createNewProxy() {
-		Runnable r = new Runnable(){
-			@Override
-			public void run(){
-				try {
-					proxy();
-				} 
-				catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		};
+
+    private boolean validExtension(String path) {
+        return path.contentEquals("m4a") || path.contentEquals("mp3");
+    }
+
+    void createNewProxy() {
+		Runnable r = () -> {
+            try {
+                proxy();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        };
 		pool.execute(r);
 		
 	}
@@ -109,30 +130,42 @@ public class DJServer {
 		player.login(username, password);
 	}
 	
-	//sends a search to the music player and sends back the results to the proxy
-	ArrayList<Track> search(String target){
-		return player.search(target);
+	//searches through the local files for something that matches the target and adds on the top ten results from spotify
+	ArrayList<Song> search(String target){
+
+        ArrayList<Song> fromLocal = this.searchLocal(target);
+        ArrayList<Song> fromSpotify = player.search(target);
+        fromLocal.addAll(fromSpotify);
+        return fromLocal;
 	}
-	
-	//closes the server
+
+    private ArrayList<Song> searchLocal(String target) {
+        ArrayList<Song> results = new ArrayList<>();
+        for (LocalSong song : localSongs) {
+            String title = song.getTitle();
+            String artist = song.getArtist();
+            String album = song.getAlbum();
+            if(StringUtils.containsIgnoreCase(title, target)
+                    || StringUtils.containsIgnoreCase(artist, target)
+                    || StringUtils.containsIgnoreCase(album, target)) {
+                results.add(song);
+            }
+        }
+        return results;
+    }
+
+    //closes the server
 	public void close() throws IOException{
 		server.close();
 		System.exit(0);
 	}
-	
 
-	
-	//start the server!
-	public static void main(String[] args) throws IOException{
-			new DJServer("password");
-	}
-	//sends the taken in index to the MusicPlayer and initializes playlist boolean if not initialized
-	void add(Track track) {
-		player.addSong(track);
-		if (!playlistInit) {
-			playlistInit = true;
-		}		
-	}
+    void add(Song song) {
+        player.addSong(song);
+        if (!playlistInit) {
+            playlistInit = true;
+        }
+    }
 
 	String trackToString(Track track) {
 		return player.trackToString(track);
@@ -172,5 +205,29 @@ public class DJServer {
             proxy.resetSkipRequested();
         }
         skipRequestCount = 0;
+    }
+
+    boolean isStarted() {
+        return started;
+    }
+
+
+    void processMessage(byte[] myByteArray) {
+        File directory = new File("Recorded Messages");
+        String filename = directory.getAbsolutePath().concat("/").concat(new Date(System.currentTimeMillis()).toString()).concat(".m4a");
+        File newFile = new File(filename);
+        System.out.println(filename);
+        FileOutputStream fos;
+        try {
+            fos = new FileOutputStream(newFile);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            bos.write(myByteArray, 0 , myByteArray.length);
+            bos.flush();
+            bos.close();
+            player.addSong(new Message(filename));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 }
