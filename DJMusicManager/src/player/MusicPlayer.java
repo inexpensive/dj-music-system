@@ -197,7 +197,9 @@ public class MusicPlayer {
 		if(currentSong.getSource() == Song.Source.LOCAL || currentSong.getSource() == Song.Source.MESSAGE){
 			mediaPlayer.stop();
 		}
-		//otherwise do nothing
+		else {
+			js.stop();
+		}
 
 		this.play();
 	}

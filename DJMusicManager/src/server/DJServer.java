@@ -13,11 +13,15 @@ package server;
 
 import jahspotify.media.Track;
 
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Scanner;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -29,7 +33,9 @@ import player.Message;
 import player.MusicPlayer;
 import player.Song;
 
-public class DJServer{
+import javax.swing.*;
+
+public class DJServer extends JFrame{
 	
 	private ServerSocket server;
 	private MusicPlayer player;
@@ -39,26 +45,62 @@ public class DJServer{
 	private int skipRequestCount;
 	private final ArrayList<ServerProxy> proxies = new ArrayList<>();
 	private final Executor pool = Executors.newCachedThreadPool();
-	private final String password;
+	private final String password = "password";
     private ArrayList<LocalSong> localSongs = new ArrayList<>();
+    private JTextField usernameTextField;
+    private JPasswordField passwordField;
+    private JPanel panel;
+    private JSpinner spinner;
 
 	
-	DJServer(String pass, MediaPlayer mediaPlayer) throws IOException{
+	DJServer(String pass, MediaPlayer mediaPlayer)  throws IOException {
+        super("DJ Music Manager");
 
-        //set the password for the server
-        password = pass;
+        player = new MusicPlayer(this, mediaPlayer);
 
-		//set up server and allow a client to connect
-		server = new ServerSocket(1729);
-		player = new MusicPlayer(this, mediaPlayer);
-		Scanner in = new Scanner(System.in);
-		System.out.print("username: ");
-		String username = in.next();
-		System.out.print("password: ");
-		String spotifyPassword = in.next(); //TODO: mask this using the Console class, which doesn't work with javaw (which is what IDEs use)
-		player.login(username, spotifyPassword);
-		skipRequestCount = 0;
-		in.close();
+        //set up the login controls for the server
+        usernameTextField = new JTextField("Spotify username");
+        usernameTextField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                usernameTextField.setText("");
+                usernameTextField.removeMouseListener(this);
+            }
+        });
+        passwordField = new JPasswordField(20);
+        passwordField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    passwordField.removeActionListener(this);
+                    login();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+            }
+        });
+        panel = new JPanel(new GridLayout(2,2));
+        panel.add(usernameTextField);
+        panel.add(passwordField);
+        this.add(panel);
+        this.pack();
+        this.setVisible(true);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+
+		
+	}
+
+    private void login() throws IOException {
+        //set up server and allow a client to connect
+        server = new ServerSocket(1729);
+
+        String username = usernameTextField.getText();
+        String spotifyPassword = new String(passwordField.getPassword());
+        player.login(username, spotifyPassword);
+        //noinspection UnusedAssignment
+        spotifyPassword = null; //clear password
+        skipRequestCount = 0;
 
         //add all local songs to the server
         File songFolder = new File("/home/lawrence/Documents/School/Taylor Swift – 1989/");
@@ -71,10 +113,23 @@ public class DJServer{
                     localSongs.add(new LocalSong(path));
             }
         }
-		
-		this.createNewProxy();
-		
-	}
+        JLabel passwordReminderText = new JLabel("System Password:");
+        JLabel spinnerReminderText = new JLabel("Skip Request Threshold:");
+
+        panel.remove(usernameTextField);
+        panel.remove(passwordField);
+        spinner = new JSpinner(new SpinnerNumberModel(3, 1, 50, 1));
+
+        panel.add(passwordReminderText);
+        panel.add(passwordField);
+        panel.add(spinnerReminderText);
+        panel.add(spinner);
+        pack();
+
+
+
+        this.createNewProxy();
+    }
 
     private boolean validExtension(String path) {
         return path.contentEquals("m4a") || path.contentEquals("mp3");
@@ -115,21 +170,23 @@ public class DJServer{
 		paused = !paused;
 	}
 	
-	//sends a skip request to the MusicPlayer once 3 skipRequests are received
+	//sends a skip request to the MusicPlayer once enough skipRequests (threshold based on the JSpinner value) are received
 	void skip(){
 		skipRequestCount++;
-		int SKIP_THRESHOLD = 3;
-		if (skipRequestCount >= SKIP_THRESHOLD) {
+		int threshold = (int) spinner.getValue();
+		if (skipRequestCount >= threshold) {
 			player.skip();
 		}
+        resetSkipRequests();
 	}
-	
-	//sends a login request the the MusicPlayer
-	public void login(String username, String password){
-		player.login(username, password);
-	}
-	
-	//searches through the local files for something that matches the target and adds on the top ten results from spotify
+
+    private void resetSkipRequests() {
+        for (ServerProxy proxy : proxies) {
+            proxy.resetSkipRequested();
+        }
+    }
+
+    //searches through the local files for something that matches the target and adds on the top ten results from spotify
 	ArrayList<Song> search(String target){
 
         ArrayList<Song> fromLocal = this.searchLocal(target);
@@ -183,11 +240,12 @@ public class DJServer{
 	}
 
     boolean checkPassword(String check){
-        return password.contentEquals(check);
+        return new String(passwordField.getPassword()).contentEquals(check);
     }
 
     void adminSkip() {
         player.skip();
+        resetSkipRequests();
     }
 
     //sends the elapsed time to the proxies

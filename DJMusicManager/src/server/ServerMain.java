@@ -13,6 +13,7 @@ public class ServerMain extends Application {
 
     public static void main(String[] args) throws IOException {
         new DJServer("password", mediaPlayer);
+        System.out.println("testo");
         launch(args);
     }
 
