@@ -301,7 +301,6 @@ public class MusicPlayer {
     }
 	
 	//automatically skips the track once it's over
-	//TODO: figure out how to freeze the sleep counter while the system is paused in order to not trigger the autoskip early
 	private void autoSkip(){
 		Song tempSong = currentSong;
         elapsed = 0;
