@@ -2,13 +2,13 @@
  * ServerProxy for DJ Music Manager (tentative title)  		*
  * waits for requests from a client and passes	            *
  * them to the server	        							*
- *															*
- * uses the libjahspotify library 							*
- * by Niels van de Weem	 (nvdweem on github)				*
  * 															*
  * by Lawrence Bouzane (inexpensive on github)				*
  ************************************************************/
 
+/**
+ * Provides the classes necessary start a server to control a Music System.
+ */
 package server;
 
 import player.Song;
@@ -28,19 +28,26 @@ class ServerProxy {
 	private ArrayList<Song> results;
 	private boolean skipRequested;
 
-	
+    /**
+     * Creates a ServerProxy on the given ServerSocket and associated with the given DJServer
+     * @param ser The ServerSocket clients connect to.
+     * @param djServer The DJSystem associated with the ServerSocket.
+     * @throws IOException
+     */
 	ServerProxy(ServerSocket ser, DJServer djServer) throws IOException{
 		//setting up the socket to accept a connection from a client
 		this.djServer = djServer;
 		Socket controlSocket = ser.accept();
 		Socket currentlyPlayingSocket = ser.accept();
 		skipRequested = false;
+        //once connected, log it on the server that a connection has been established.
 		System.out.println("CONNECTION ESTABLISHED");
 		djServer.createNewProxy();
 		outToClient = new ObjectOutputStream(controlSocket.getOutputStream());
 		inFromClient = new ObjectInputStream(controlSocket.getInputStream());
 		outToCurrentlyPlaying = new ObjectOutputStream(currentlyPlayingSocket.getOutputStream());
 		//thread to wait for input from the client
+        //this needs to be on its own thread to be asynchronous from the updateElapsed method
 		Runnable r = () -> {
             try {
                 listener();
@@ -48,47 +55,55 @@ class ServerProxy {
             catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-catch (IOException e){
-System.out.println("caught IOException. closing server");
-e.printStackTrace();
-close();
-}
+            //close the proxy if an IOException is caught here. (happens occasionally when the client is closed unexpectedly).
+            catch (IOException e) {
+                System.out.println("caught IOException. closing server");
+                e.printStackTrace();
+                close();
+            }
         };
 		Executor pool = Executors.newCachedThreadPool();
 		pool.execute(r);
 	}
-	
-	//sends an update request to the client to update the currently playing song
-	void updateCurrentlyPlaying(String currentlyPlaying) throws IOException{
-		outToCurrentlyPlaying.writeObject(currentlyPlaying);
-		skipRequested = false;
-	}
-	
-	private void close(){
+
+    /**
+     * Let the DJServer know to remove this proxy from the proxies list.
+     */
+    private void close(){
 		djServer.removeProxy(this);
 	}
-	
+
+    /**
+     * Reset the skipRequested status.
+     */
 	void resetSkipRequested(){
 		skipRequested = false;
 	}
-	
-	//listens for commands from the client
-		private void listener() throws IOException, ClassNotFoundException {
-			System.out.println("NOW RUNNING");
-			String command = "";
-			boolean done = false;
-			while(!done){
-				System.out.println("waiting for input...");
-				try{
-					command = (String) inFromClient.readObject();
-				}
-				catch (EOFException e){
-                    System.out.println("caught EOFException. closing server");
-                    this.close();
-                    done = true;
-                }
-				System.out.println("received " + command);
-				switch (command) { //maybe make this an ENUM?
+
+    /**
+     * Listens to and processes commands coming in from the client.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+	private void listener() throws IOException, ClassNotFoundException {
+		System.out.println("NOW RUNNING");
+		String command = "";
+		boolean done = false;
+		while(!done){
+			System.out.println("waiting for input...");
+			try{
+				command = (String) inFromClient.readObject();
+			}
+            //close the proxy if an EOFException is caught here. (happens when the client is closed unexpectedly).
+    		catch (EOFException e){
+                System.out.println("caught EOFException. closing server");
+                this.close();
+                done = true;
+            }
+			System.out.println("received " + command);
+
+            //I couldn't get this to work properly with an enum in both projects, so I stuck with using strings.
+			switch (command) {
 					
 				//sends a play request to the server
 				case "play":
@@ -125,11 +140,6 @@ close();
 					Song song = results.get((Integer) inFromClient.readObject());
 					djServer.add(song);
 				break;
-					
-				case "curr":
-					String curr = djServer.getCurrentlyPlaying();
-					outToClient.writeObject(curr);
-				break;
 						
 				//closes the proxy
 				case "close":
@@ -159,20 +169,25 @@ close();
                     djServer.adminSkip();
                 break;
 
+                //sends the playlist details to the client
                 case "playlist":
-                    String[] testCurr = djServer.getPlaylistDetails();
-                    outToClient.writeObject(testCurr);
+                    String[] playlistDetails = djServer.getPlaylistDetails();
+                    outToClient.writeObject(playlistDetails);
                 break;
 
+                //returns true if the client is started, false otherwise.
                 case "playing":
                     outToClient.writeObject(djServer.isStarted());
-
-
-				}
+                break;
 			}
-			
-		}
+	    }
+    }
 
+    /**
+     * Send the elapse and duration numbers (cast as integers) to the client to update the progress bar.
+     * @param elapsed The elapsed time of the Song.
+     * @param duration The total duration of the Song.
+     */
     void updateElapsed(long elapsed, long duration) {
         try {
             int[] out = {(int) duration, (int) elapsed};
